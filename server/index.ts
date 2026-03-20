@@ -1215,7 +1215,6 @@ app.post('/api/inquiries/save', (req, res) => {
 
   console.log('[POST /api/inquiries/save] User authenticated:', currentUser.userId);
 
-  const body = req.body || {};
   const inquiryNo = body.inquiryNo || `INQ-${Date.now()}`;
   const existing = db.prepare('SELECT * FROM inquiries WHERE inquiry_no = ?').get(inquiryNo) as any;
 
