@@ -1160,6 +1160,7 @@ app.post('/api/appraisal-cases/:caseNo/review', (req, res) => {
 
 // ========== Inquiries APIs ==========
 app.get('/api/inquiries', (req, res) => {
+  console.log('[GET /api/inquiries] X-User-Id:', req.header('x-user-id'));
   const currentUser = ensurePermission(req, res, 'sales.inquiry.view');
   if (!currentUser) return;
 
@@ -1202,8 +1203,17 @@ app.get('/api/inquiries/:inquiryNo', (req, res) => {
 });
 
 app.post('/api/inquiries/save', (req, res) => {
+  const xUserId = req.header('x-user-id');
+  const body = req.body || {};
+  console.log('[POST /api/inquiries/save] X-User-Id:', xUserId, 'inquiryNo:', body.inquiryNo);
+  
   const currentUser = ensurePermission(req, res, 'sales.inquiry.manage');
-  if (!currentUser) return;
+  if (!currentUser) {
+    console.log('[POST /api/inquiries/save] Permission denied for user:', xUserId);
+    return;
+  }
+
+  console.log('[POST /api/inquiries/save] User authenticated:', currentUser.userId);
 
   const body = req.body || {};
   const inquiryNo = body.inquiryNo || `INQ-${Date.now()}`;
