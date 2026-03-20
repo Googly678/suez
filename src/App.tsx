@@ -695,6 +695,30 @@ export default function App() {
       isNew: false,
     };
 
+    // 在后端创建 inquiry 记录
+    const userId = localStorage.getItem('userId') || 'USER-001';
+    fetch('/api/inquiries/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId,
+      },
+      body: JSON.stringify({
+        inquiryNo: sentOrder.id,
+        customerName: sentOrder.customer,
+        customerCode: customerCode,
+        formData: {},
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          console.error('[handleInquirySendConfirm] Failed to create inquiry in backend');
+        }
+      })
+      .catch((error) => {
+        console.error('[handleInquirySendConfirm] Error creating inquiry in backend:', error);
+      });
+
     setOrders((prev) => {
       const index = prev.findIndex((item) => item.id === sentOrder.id);
       if (index >= 0) {
