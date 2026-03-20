@@ -1,18 +1,93 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Check, ChevronLeft, Send } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
 interface InquiryFormProps {
   onClose: () => void;
   customerName?: string;
+  inquiryNo?: string;
+  onSubmitData?: (data: any) => void;
 }
 
 const getTodayStr = () => new Date().toISOString().split('T')[0];
 const normalizeDigits = (value: string) => value.replace(/[^\d]/g, '');
 
-const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName }) => {
+function SectionTitle({ title, number }: { title: string; number: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-4 mt-6">
+      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+        {number}
+      </div>
+      <h3 className="font-bold text-slate-800">{title}</h3>
+    </div>
+  );
+}
+
+function InputField({
+  label,
+  placeholder,
+  value,
+  onChange,
+  type = 'text',
+  disabled = false,
+  required = false,
+}: any) {
+  return (
+    <div className="mb-4">
+      <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${disabled ? 'opacity-70 cursor-not-allowed bg-slate-100' : ''}`}
+      />
+    </div>
+  );
+}
+
+function NumberField({ label, value, onChange, disabled = false, required = false, suffix = '' }: any) {
+  return (
+    <div className="mb-4">
+      <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="0"
+          value={value}
+          onChange={(e) => onChange(normalizeDigits(e.target.value))}
+          disabled={disabled}
+          className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${disabled ? 'opacity-70 cursor-not-allowed bg-slate-100' : ''}`}
+        />
+        {suffix ? <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500">{suffix}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function CheckboxField({ label, checked, onChange, disabled = false }: any) {
+  return (
+    <label className={`flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl mb-3 transition-colors ${disabled ? 'opacity-70 cursor-not-allowed bg-slate-100' : 'active:bg-slate-100 cursor-pointer'}`}>
+      <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${checked ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'}`}>
+        {checked && <Check className="w-4 h-4 text-white" />}
+      </div>
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <input type="checkbox" className="hidden" checked={checked} onChange={onChange} disabled={disabled} />
+    </label>
+  );
+}
+
+const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquiryNo, onSubmitData }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [countdown, setCountdown] = useState(5);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<any>({
     companyName: customerName || '',
@@ -92,69 +167,6 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName }) => {
       return () => clearTimeout(timer);
     }
   }, [countdown, currentStep]);
-
-  const SectionTitle = ({ title, number }: { title: string; number: string }) => (
-    <div className="flex items-center gap-2 mb-4 mt-6">
-      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-        {number}
-      </div>
-      <h3 className="font-bold text-slate-800">{title}</h3>
-    </div>
-  );
-
-  const InputField = ({
-    label,
-    placeholder,
-    value,
-    onChange,
-    type = 'text',
-    disabled = false,
-    required = false,
-  }: any) => (
-    <div className="mb-4">
-      <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${disabled ? 'opacity-70 cursor-not-allowed bg-slate-100' : ''}`}
-      />
-    </div>
-  );
-
-  const NumberField = ({ label, value, onChange, disabled = false, required = false, suffix = '' }: any) => (
-    <div className="mb-4">
-      <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="0"
-          value={value}
-          onChange={(e) => onChange(normalizeDigits(e.target.value))}
-          disabled={disabled}
-          className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${disabled ? 'opacity-70 cursor-not-allowed bg-slate-100' : ''}`}
-        />
-        {suffix ? <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500">{suffix}</span> : null}
-      </div>
-    </div>
-  );
-
-  const CheckboxField = ({ label, checked, onChange, disabled = false }: any) => (
-    <label className={`flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl mb-3 transition-colors ${disabled ? 'opacity-70 cursor-not-allowed bg-slate-100' : 'active:bg-slate-100 cursor-pointer'}`}>
-      <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${checked ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'}`}>
-        {checked && <Check className="w-4 h-4 text-white" />}
-      </div>
-      <span className="text-sm font-medium text-slate-700">{label}</span>
-      <input type="checkbox" className="hidden" checked={checked} onChange={onChange} disabled={disabled} />
-    </label>
-  );
 
   const renderDeclaration = () => (
     <div className="mt-6 p-5 bg-blue-50 rounded-2xl border border-blue-100">
@@ -480,7 +492,11 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName }) => {
     return '';
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
     const e1 = validateStep1();
     const e2 = validateStep2();
     const e3 = validateStep3();
@@ -489,9 +505,58 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName }) => {
       alert(err);
       return;
     }
-    setShowConfirmModal(false);
-    onClose();
-    setTimeout(() => alert('询价单已提交！'), 100);
+
+    setIsSubmitting(true);
+
+    const attachmentName = `询价单_${inquiryNo || customerName || '未命名'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    let pdfDataUri = '';
+
+    try {
+      const element = document.getElementById('inquiry-form-print');
+      if (element) {
+        const opt = {
+          margin: 10,
+          filename: attachmentName,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+        };
+
+        pdfDataUri = await html2pdf().set(opt).from(element).toPdf().output('datauristring');
+
+        if (pdfDataUri) {
+          const link = document.createElement('a');
+          link.href = pdfDataUri;
+          link.download = attachmentName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate inquiry PDF:', error);
+    }
+
+    try {
+      if (onSubmitData) {
+        onSubmitData({
+          inquiryNo: inquiryNo,
+          customerName: customerName,
+          submittedAt: new Date().toISOString(),
+          formData: formData,
+          status: '已回填',
+          attachmentName,
+          attachmentType: 'application/pdf',
+          attachmentData: pdfDataUri,
+        });
+      }
+
+      setShowConfirmModal(false);
+      onClose();
+      setTimeout(() => alert(`询价单 ${inquiryNo} 已提交！相关信息已保存。`), 100);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getStepProgress = () => {
@@ -517,7 +582,7 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName }) => {
         <div className="w-10"></div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-32">
+      <div id="inquiry-form-print" className="flex-1 overflow-y-auto px-5 pb-32">
         {currentStep === 0 && renderDeclaration()}
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
@@ -629,11 +694,11 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName }) => {
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
             {renderDeclaration()}
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold">
+              <button disabled={isSubmitting} onClick={() => setShowConfirmModal(false)} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold disabled:opacity-60 disabled:cursor-not-allowed">
                 取消
               </button>
-              <button onClick={handleSubmit} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">
-                确认提交
+              <button disabled={isSubmitting} onClick={handleSubmit} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold disabled:opacity-60 disabled:cursor-not-allowed">
+                {isSubmitting ? '提交中...' : '确认提交'}
               </button>
             </div>
           </div>

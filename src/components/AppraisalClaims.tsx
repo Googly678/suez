@@ -1,40 +1,125 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronDown, Search, Filter, Plus, Upload, FileText, AlertCircle, Check, ClipboardList, Building2, Trash2, Calculator, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronDown, Search, Plus, Upload, FileText, AlertCircle, Check, ClipboardList, Building2, Trash2, Calculator, CheckCircle2 } from 'lucide-react';
 
-const mockAppraisalData = [
-  { 
-    id: 'CLM-20260301-001', 
-    customerCode: 'SF001',
-    policyNo: 'POL-2026-8899001', 
-    company: '平安财险', 
-    type: '物流责任险', 
-    insured: '顺丰速运, 顺丰航空', 
-    startTime: '2026-01-01', 
-    endTime: '2026-12-31',
-    status: '待理算', 
-    reporter: '张三', 
-    reportTime: '2026-03-15 10:00' 
-  },
-  { 
-    id: 'CLM-20260302-002', 
-    customerCode: 'KY003',
-    policyNo: 'POL-2026-8899002', 
-    company: '太平洋产险', 
-    type: '物流责任险', 
-    insured: '跨越速运', 
-    startTime: '2026-02-15', 
-    endTime: '2027-02-14',
-    status: '理算中', 
-    reporter: '李四', 
-    reportTime: '2026-03-14 15:30' 
-  },
-];
-
-export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { claimsPool: any[], onAppraisalSubmit: (claimId: string, appraisalData: any) => void }) {
+export default function AppraisalClaims({
+  claimsPool,
+  onCaseOpen,
+  onAppraisalSubmit,
+  initialSelectedCase,
+  onInitialSelectedCaseConsumed,
+  reviewStage = 'appraisal',
+}: {
+  claimsPool: any[];
+  onCaseOpen: (claimCase: any, reviewStage?: 'appraisal' | 'insurer') => void;
+  onAppraisalSubmit: (claimId: string, appraisalData: any, reviewStage?: 'appraisal' | 'insurer') => void;
+  initialSelectedCase?: any;
+  onInitialSelectedCaseConsumed?: () => void;
+  reviewStage?: 'appraisal' | 'insurer';
+}) {
   const [selectedCase, setSelectedCase] = useState<any>(null);
+  const [reviewComment, setReviewComment] = useState('');
+  const [showReviewConfirm, setShowReviewConfirm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [draftFilter, setDraftFilter] = useState({
+    search: '',
+    status: '',
+    reportDateFrom: '',
+    reportDateTo: '',
+  });
+  const [appliedFilter, setAppliedFilter] = useState({
+    search: '',
+    status: '',
+    reportDateFrom: '',
+    reportDateTo: '',
+  });
+  const stageConfig =
+    reviewStage === 'insurer'
+      ? {
+          pageTitle: '保司审核',
+          introText: '以下理赔协助信息与公估理算结果仅供保司审核参考，当前页面用于保司审核处理。',
+          openableStatus: '定损中',
+          inProgressStatus: '审核中',
+          approvedStatus: '定损协议通过',
+          rejectedStatus: '审核退回',
+          openActionText: '认领案件',
+          continueActionText: '继续审核',
+          submitButtonText: '提交审核结果',
+          approveLabel: '通过',
+          rejectLabel: '退回',
+          rejectedHint: '当前案件已被保司退回，等待补充资料后再次进入保司审核。',
+          statusOptions: ['定损中', '审核中', '审核退回', '定损协议通过'],
+        }
+      : {
+          pageTitle: '公估理赔',
+          introText: '以下理赔协助信息来自业务端录入，当前页面仅供公估理算参考（只读）。',
+          openableStatus: '已提交',
+          inProgressStatus: '公估中',
+          approvedStatus: '定损中',
+          rejectedStatus: '已退回',
+          openActionText: '开始公估',
+          continueActionText: '继续公估',
+          submitButtonText: '提交理算结果',
+          approveLabel: '同意',
+          rejectLabel: '退回',
+          rejectedHint: '当前案件已退回，等待理赔协助补充并再次提交后，再进入公估审核。',
+          statusOptions: ['已提交', '公估中', '定损中', '已退回'],
+        };
+  const isReviewEditable = selectedCase?.status === stageConfig.inProgressStatus;
 
-  const displayData = [...mockAppraisalData, ...claimsPool];
+  const displayData = [...claimsPool]
+    .filter((item, index, arr) => arr.findIndex((other) => other.id === item.id) === index)
+    .filter((item) => (reviewStage === 'insurer' ? stageConfig.statusOptions.includes(item.status) : true));
+
+  const parseTime = (value: string) => {
+    const time = new Date(value || '').getTime();
+    return Number.isNaN(time) ? null : time;
+  };
+
+  const filteredDisplayData = displayData.filter((row) => {
+    const keyword = appliedFilter.search.trim();
+    const matchesSearch =
+      !keyword ||
+      row.id?.includes(keyword) ||
+      row.policyNo?.includes(keyword) ||
+      row.insured?.includes(keyword);
+
+    const matchesStatus = !appliedFilter.status || row.status === appliedFilter.status;
+
+    const rowTime = parseTime(row.reportTime || '');
+    const fromTime = appliedFilter.reportDateFrom ? parseTime(`${appliedFilter.reportDateFrom} 00:00:00`) : null;
+    const toTime = appliedFilter.reportDateTo ? parseTime(`${appliedFilter.reportDateTo} 23:59:59`) : null;
+
+    const matchesDateFrom = fromTime === null || rowTime === null || rowTime >= fromTime;
+    const matchesDateTo = toTime === null || rowTime === null || rowTime <= toTime;
+
+    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
+  });
+
+  const handleApplyFilter = () => {
+    setAppliedFilter(draftFilter);
+  };
+
+  const handleResetFilter = () => {
+    const empty = { search: '', status: '', reportDateFrom: '', reportDateTo: '' };
+    setDraftFilter(empty);
+    setAppliedFilter(empty);
+  };
+
+  const getStatusTone = (status: string) => {
+    if (status === stageConfig.openableStatus) return 'bg-amber-100 text-amber-700';
+    if (status === stageConfig.inProgressStatus) return 'bg-blue-100 text-blue-700';
+    if (status === stageConfig.approvedStatus) return 'bg-emerald-100 text-emerald-700';
+    if (status === stageConfig.rejectedStatus || status === '已退回') return 'bg-rose-100 text-rose-700';
+    return 'bg-slate-100 text-slate-700';
+  };
+
+  useEffect(() => {
+    if (initialSelectedCase) {
+      setSelectedCase(initialSelectedCase);
+      setReviewComment(initialSelectedCase.reviewComment || '');
+      onInitialSelectedCaseConsumed?.();
+    }
+  }, [initialSelectedCase, onInitialSelectedCaseConsumed]);
 
   if (selectedCase) {
     return (
@@ -77,7 +162,7 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
 
             <div className="flex items-center gap-3">
               <span className={`px-2 py-1 rounded text-[10px] font-bold ${
-                selectedCase.status === '待理算' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                getStatusTone(selectedCase.status)
               }`}>
                 {selectedCase.status}
               </span>
@@ -89,8 +174,14 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
         <div className="flex-1 space-y-6 pb-24 mt-4">
           <div className="bg-[#f5f3ff] rounded-2xl border border-purple-100 p-4 shadow-sm mb-6 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-purple-600" />
-            <span className="text-sm text-purple-900 font-medium">以下理赔协助信息来自业务端录入，当前页面仅供公估理算参考（只读）。</span>
+            <span className="text-sm text-purple-900 font-medium">{stageConfig.introText}</span>
           </div>
+
+          {selectedCase.status === stageConfig.rejectedStatus && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+              {stageConfig.rejectedHint}
+            </div>
+          )}
 
           {/* 1. 基础信息 (Read-only) */}
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -379,9 +470,10 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">¥</span>
                       <input 
                         type="number" 
-                        className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500/20 outline-none" 
+                        className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500/20 outline-none disabled:bg-slate-50 disabled:text-slate-400" 
                         defaultValue="50000.00" 
                         max={5000000}
+                        disabled={!isReviewEditable}
                         onBlur={(e) => {
                           if (parseFloat(e.target.value) > 5000000) {
                             e.target.value = "5000000.00";
@@ -395,14 +487,14 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
                     <label className="text-[10px] font-bold text-slate-500 uppercase">免赔额/率 (B)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">¥</span>
-                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white" defaultValue="500.00" />
+                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white disabled:bg-slate-50 disabled:text-slate-400" defaultValue="500.00" disabled={!isReviewEditable} />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase">残值扣除 (C)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">¥</span>
-                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white" defaultValue="0.00" />
+                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white disabled:bg-slate-50 disabled:text-slate-400" defaultValue="0.00" disabled={!isReviewEditable} />
                     </div>
                   </div>
                   <div className="space-y-1.5">
@@ -418,7 +510,7 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700">公估报告及附件</label>
-                  <button className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline">
+                  <button className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline disabled:text-slate-400 disabled:no-underline" disabled={!isReviewEditable}>
                     <Plus className="w-3 h-3" />
                     添加附件
                   </button>
@@ -482,7 +574,7 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
               <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-4">
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  理算审核操作
+                  {reviewStage === 'insurer' ? '保司审核操作' : '理算审核操作'}
                 </h4>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-700">审核结论</label>
@@ -492,33 +584,35 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
                       type="radio" 
                       name="audit_result" 
                       className="w-4 h-4 text-blue-600 focus:ring-blue-500" 
-                      onChange={() => setSelectedCase({ ...selectedCase, nextStatus: '理赔通过', isReturned: false })}
+                      checked={selectedCase.reviewDecision === 'approve'}
+                      disabled={!isReviewEditable}
+                      onChange={() => setSelectedCase({ ...selectedCase, reviewDecision: 'approve' })}
                     />
-                    <span className="text-sm text-slate-700 group-hover:text-slate-900">同意赔付</span>
+                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{stageConfig.approveLabel}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input 
                       type="radio" 
                       name="audit_result" 
                       className="w-4 h-4 text-blue-600 focus:ring-blue-500" 
-                      onChange={() => setSelectedCase({ ...selectedCase, nextStatus: '理赔通过', isReturned: true })}
+                      checked={selectedCase.reviewDecision === 'reject'}
+                      disabled={!isReviewEditable}
+                      onChange={() => setSelectedCase({ ...selectedCase, reviewDecision: 'reject' })}
                     />
-                    <span className="text-sm text-slate-700 group-hover:text-slate-900">退回补充资料</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input 
-                      type="radio" 
-                      name="audit_result" 
-                      className="w-4 h-4 text-blue-600 focus:ring-blue-500" 
-                      onChange={() => setSelectedCase({ ...selectedCase, nextStatus: '赔付通过', isReturned: false })}
-                    />
-                    <span className="text-sm text-slate-700 group-hover:text-slate-900">支付到账</span>
+                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{stageConfig.rejectLabel}</span>
                   </label>
                 </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-700">审核意见</label>
-                  <textarea rows={3} className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500/20 outline-none" placeholder="请详细输入审核意见..."></textarea>
+                  <textarea
+                    rows={3}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500/20 outline-none"
+                    placeholder="请详细输入审核意见..."
+                    value={reviewComment}
+                    disabled={!isReviewEditable}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                  ></textarea>
                 </div>
               </div>
             </div>
@@ -527,26 +621,55 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
 
         {/* Bottom Toolbar */}
         <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-end items-center px-6 lg:px-8 gap-4">
-          <button className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors">
+          <button className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" disabled={!isReviewEditable}>
             保存草稿
           </button>
           <button 
             onClick={() => {
-              if (selectedCase.nextStatus) {
-                onAppraisalSubmit(selectedCase.id, { 
-                  status: selectedCase.nextStatus, 
-                  isReturned: selectedCase.isReturned 
-                });
-                setSelectedCase(null);
+              if (selectedCase.reviewDecision) {
+                setShowReviewConfirm(true);
               } else {
                 alert('请选择审核结论');
               }
             }}
-            className="px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors"
+            disabled={!isReviewEditable}
+            className="px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            提交理算结果
+            {stageConfig.submitButtonText}
           </button>
         </div>
+
+        {showReviewConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">确认提交</h3>
+              <p className="text-sm text-slate-600 mb-6">
+                确认提交本次审核结论吗？提交后状态将更新为{selectedCase.reviewDecision === 'approve' ? stageConfig.approvedStatus : stageConfig.rejectedStatus}。
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowReviewConfirm(false)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-md hover:bg-slate-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    onAppraisalSubmit(selectedCase.id, {
+                      reviewDecision: selectedCase.reviewDecision,
+                      reviewComment,
+                    }, reviewStage);
+                    setShowReviewConfirm(false);
+                    setSelectedCase(null);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  确认
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -554,47 +677,76 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
   return (
     <div className="flex flex-col h-full">
       {/* Filter Section */}
-      <div className="mb-6 pb-6 border-b border-slate-200">
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm p-5">
         <div className="flex flex-wrap gap-x-6 gap-y-5">
           <div className="space-y-1.5 flex-1 min-w-[200px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">综合搜索</label>
             <input 
               type="text" 
               placeholder="案件编号/保单号" 
+              value={draftFilter.search}
+              onChange={(event) => setDraftFilter((prev) => ({ ...prev, search: event.target.value }))}
               className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-slate-400"
             />
           </div>
           
           <div className="space-y-1.5 flex-1 min-w-[200px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">案件状态</label>
-            <select className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+            <select
+              value={draftFilter.status}
+              onChange={(event) => setDraftFilter((prev) => ({ ...prev, status: event.target.value }))}
+              className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            >
               <option value="">全部</option>
-              <option value="待理算">待理算</option>
-              <option value="理算中">理算中</option>
-              <option value="已审核">已审核</option>
+              {stageConfig.statusOptions.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
             </select>
           </div>
 
           <div className="space-y-1.5 flex-1 min-w-[280px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">报案日期</label>
             <div className="flex items-center w-full px-3 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 transition-colors">
-              <input type="date" className="bg-transparent border-none focus:outline-none text-slate-700 w-full flex-1 cursor-pointer" />
+              <input
+                type="date"
+                value={draftFilter.reportDateFrom}
+                onChange={(event) => setDraftFilter((prev) => ({ ...prev, reportDateFrom: event.target.value }))}
+                className="bg-transparent border-none focus:outline-none text-slate-700 w-full flex-1 cursor-pointer"
+              />
               <span className="text-slate-300 mx-2 text-xs">至</span>
-              <input type="date" className="bg-transparent border-none focus:outline-none text-slate-700 w-full flex-1 cursor-pointer" />
+              <input
+                type="date"
+                value={draftFilter.reportDateTo}
+                onChange={(event) => setDraftFilter((prev) => ({ ...prev, reportDateTo: event.target.value }))}
+                className="bg-transparent border-none focus:outline-none text-slate-700 w-full flex-1 cursor-pointer"
+              />
             </div>
+          </div>
+
+          <div className="flex items-end gap-2 min-w-[220px]">
+            <button
+              type="button"
+              onClick={handleApplyFilter}
+              className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+            >
+              查询
+            </button>
+            <button
+              type="button"
+              onClick={handleResetFilter}
+              className="px-4 py-1.5 border border-slate-300 text-slate-700 text-sm rounded hover:bg-slate-50 transition-colors"
+            >
+              重置
+            </button>
           </div>
         </div>
         
-        <div className="mt-5 flex justify-end gap-3">
-          <button className="px-4 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 hover:text-slate-900 transition-colors">重置</button>
-          <button className="px-4 py-1.5 text-sm font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors">查询</button>
-        </div>
       </div>
 
       {/* Table Section */}
       <div className="flex flex-col">
         <div className="pb-4 flex justify-between items-center">
-          <div className="text-sm text-slate-500">共找到 <span className="font-medium text-slate-900">{displayData.length}</span> 条公估理赔记录</div>
+          <div className="text-sm text-slate-500">共找到 <span className="font-medium text-slate-900">{filteredDisplayData.length}</span> 条{stageConfig.pageTitle}记录</div>
         </div>
 
         <div className="overflow-x-auto">
@@ -611,27 +763,46 @@ export default function AppraisalClaims({ claimsPool, onAppraisalSubmit }: { cla
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {displayData.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 transition-colors group cursor-pointer" onClick={() => setSelectedCase(row)}>
+              {filteredDisplayData.map((row, idx) => (
+                <tr
+                  key={idx}
+                  className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                  onClick={() => {
+                    if (row.status === stageConfig.openableStatus) {
+                      onCaseOpen(row, reviewStage);
+                      setSelectedCase({ ...row, status: stageConfig.inProgressStatus });
+                    } else {
+                      setSelectedCase(row);
+                    }
+                    setReviewComment(row.reviewComment || '');
+                  }}
+                >
                   <td className="px-4 py-3 font-mono text-slate-600 text-xs">{row.id}</td>
                   <td className="px-4 py-3 font-mono text-slate-600 text-xs">{row.policyNo}</td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{row.insured}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900 max-w-[220px]">
+                    <span className="block truncate" title={row.insured}>{row.insured}</span>
+                  </td>
                   <td className="px-4 py-3 text-slate-800">{row.reporter}</td>
                   <td className="px-4 py-3 text-slate-600">{row.reportTime}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                      row.status === '待理算' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
-                    }`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusTone(row.status)}`}>
                       {row.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button className="text-blue-600 hover:text-blue-800 font-medium text-xs transition-colors p-1 rounded hover:bg-blue-50">
-                      开始理算
+                      {row.status === stageConfig.openableStatus ? stageConfig.openActionText : row.status === stageConfig.inProgressStatus ? stageConfig.continueActionText : '查看详情'}
                     </button>
                   </td>
                 </tr>
               ))}
+              {filteredDisplayData.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                    当前筛选条件下暂无案件记录
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

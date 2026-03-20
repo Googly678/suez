@@ -2,17 +2,13 @@ import React from 'react';
 import {
   Plus,
   ChevronDown,
-  Filter,
   MoreHorizontal,
   ChevronLeft,
   ClipboardList,
-  Building2,
   Users,
-  Target,
-  Upload,
-  Mail,
   Save,
   Send,
+  FileText,
 } from 'lucide-react';
 import {
   BarChart,
@@ -56,6 +52,34 @@ export function CustomerManagementView({
   onSelectCustomer,
   onOpenAddCustomer,
 }: CustomerManagementViewProps) {
+  const [draftCustomerFilter, setDraftCustomerFilter] = React.useState(customerFilter);
+
+  React.useEffect(() => {
+    setDraftCustomerFilter(customerFilter);
+  }, [customerFilter]);
+
+  const handleApplyCustomerFilter = () => {
+    setCustomerFilter(draftCustomerFilter);
+  };
+
+  const handleResetCustomerFilter = () => {
+    const emptyFilter = {
+      search: '',
+      businessLine: '',
+      province: '',
+      city: '',
+      district: '',
+      industry: '',
+      scale: '',
+    };
+    setDraftCustomerFilter(emptyFilter);
+    setCustomerFilter(emptyFilter);
+  };
+
+  const filteredCustomerCount = filteredCustomers.length;
+  const customerStartDisplay = filteredCustomerCount === 0 ? 0 : 1;
+  const customerEndDisplay = filteredCustomerCount;
+
   return selectedCustomer ? (
     <div className="flex flex-col h-full bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
       <div className="mb-8 flex items-center gap-4 border-b border-slate-100 pb-6">
@@ -229,15 +253,15 @@ export function CustomerManagementView({
         </button>
       </div>
 
-      <div className="mb-6 pb-6 border-b border-slate-200">
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm p-5">
         <div className="flex flex-wrap gap-x-6 gap-y-5">
           <div className="space-y-1.5 flex-1 min-w-[200px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">综合搜索</label>
             <input
               type="text"
               placeholder="名称/营业执照/唯一码"
-              value={customerFilter.search}
-              onChange={(event) => setCustomerFilter({ ...customerFilter, search: event.target.value })}
+              value={draftCustomerFilter.search}
+              onChange={(event) => setDraftCustomerFilter({ ...draftCustomerFilter, search: event.target.value })}
               className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-slate-400"
             />
           </div>
@@ -247,8 +271,8 @@ export function CustomerManagementView({
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <select
-                  value={customerFilter.province}
-                  onChange={(event) => setCustomerFilter({ ...customerFilter, province: event.target.value, city: '', district: '' })}
+                  value={draftCustomerFilter.province}
+                  onChange={(event) => setDraftCustomerFilter({ ...draftCustomerFilter, province: event.target.value, city: '', district: '' })}
                   className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                 >
                   <option value="">省份</option>
@@ -258,25 +282,25 @@ export function CustomerManagementView({
               </div>
               <div className="relative flex-1">
                 <select
-                  value={customerFilter.city}
-                  onChange={(event) => setCustomerFilter({ ...customerFilter, city: event.target.value, district: '' })}
-                  disabled={!customerFilter.province}
+                  value={draftCustomerFilter.city}
+                  onChange={(event) => setDraftCustomerFilter({ ...draftCustomerFilter, city: event.target.value, district: '' })}
+                  disabled={!draftCustomerFilter.province}
                   className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer disabled:bg-slate-50"
                 >
                   <option value="">城市</option>
-                  {customerFilter.province && Object.keys(locationData[customerFilter.province] || {}).map((city) => <option key={city} value={city}>{city}</option>)}
+                  {draftCustomerFilter.province && Object.keys(locationData[draftCustomerFilter.province] || {}).map((city) => <option key={city} value={city}>{city}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
               <div className="relative flex-1">
                 <select
-                  value={customerFilter.district}
-                  onChange={(event) => setCustomerFilter({ ...customerFilter, district: event.target.value })}
-                  disabled={!customerFilter.city}
+                  value={draftCustomerFilter.district}
+                  onChange={(event) => setDraftCustomerFilter({ ...draftCustomerFilter, district: event.target.value })}
+                  disabled={!draftCustomerFilter.city}
                   className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer disabled:bg-slate-50"
                 >
                   <option value="">区县</option>
-                  {customerFilter.province && customerFilter.city && locationData[customerFilter.province][customerFilter.city]?.map((district) => <option key={district} value={district}>{district}</option>)}
+                  {draftCustomerFilter.province && draftCustomerFilter.city && locationData[draftCustomerFilter.province][draftCustomerFilter.city]?.map((district) => <option key={district} value={district}>{district}</option>)}
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
@@ -287,8 +311,8 @@ export function CustomerManagementView({
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">行业</label>
             <div className="relative">
               <select
-                value={customerFilter.industry}
-                onChange={(event) => setCustomerFilter({ ...customerFilter, industry: event.target.value })}
+                value={draftCustomerFilter.industry}
+                onChange={(event) => setDraftCustomerFilter({ ...draftCustomerFilter, industry: event.target.value })}
                 className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
               >
                 <option value="">全部行业</option>
@@ -303,29 +327,39 @@ export function CustomerManagementView({
           <div className="space-y-1.5 flex-1 min-w-[150px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">规模(员工人数)</label>
             <div className="relative">
-              <select className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer">
+              <select
+                value={draftCustomerFilter.scale}
+                onChange={(event) => setDraftCustomerFilter({ ...draftCustomerFilter, scale: event.target.value })}
+                className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+              >
                 <option value="">全部规模</option>
-                <option value="0-50">0-50人</option>
-                <option value="50-200">50-200人</option>
-                <option value="200-1000">200-1000人</option>
-                <option value="1000+">1000人以上</option>
+                <option value="0-50人">0-50人</option>
+                <option value="50-200人">50-200人</option>
+                <option value="200-1000人">200-1000人</option>
+                <option value="1000人以上">1000人以上</option>
               </select>
               <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
           </div>
+
+          <div className="flex items-end gap-2 min-w-[220px]">
+            <button
+              type="button"
+              onClick={handleApplyCustomerFilter}
+              className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+            >
+              查询
+            </button>
+            <button
+              type="button"
+              onClick={handleResetCustomerFilter}
+              className="px-4 py-1.5 border border-slate-300 text-slate-700 text-sm rounded hover:bg-slate-50 transition-colors"
+            >
+              重置
+            </button>
+          </div>
         </div>
 
-        <div className="mt-5 flex justify-end gap-3">
-          <button
-            onClick={() => setCustomerFilter({ search: '', businessLine: '', province: '', city: '', district: '', industry: '', scale: '' })}
-            className="px-4 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            重置
-          </button>
-          <button className="px-4 py-1.5 text-sm font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors">
-            查询
-          </button>
-        </div>
       </div>
 
       <div className="flex flex-col">
@@ -374,7 +408,7 @@ export function CustomerManagementView({
 
         <div className="py-4 flex items-center justify-between">
           <div className="text-sm text-slate-500">
-            显示 <span className="font-medium text-slate-900">1</span> 至 <span className="font-medium text-slate-900">3</span> 条，共 <span className="font-medium text-slate-900">3</span> 条数据
+            显示 <span className="font-medium text-slate-900">{customerStartDisplay}</span> 至 <span className="font-medium text-slate-900">{customerEndDisplay}</span> 条，共 <span className="font-medium text-slate-900">{filteredCustomerCount}</span> 条数据
           </div>
           <div className="flex gap-1">
             <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors" disabled>上一页</button>
@@ -400,6 +434,26 @@ export function OpportunityManagementView({
   filteredOpportunities,
   onOpenAddOpportunity,
 }: OpportunityManagementViewProps) {
+  const [draftOpportunityFilter, setDraftOpportunityFilter] = React.useState(opportunityFilter);
+
+  React.useEffect(() => {
+    setDraftOpportunityFilter(opportunityFilter);
+  }, [opportunityFilter]);
+
+  const handleApplyOpportunityFilter = () => {
+    setOpportunityFilter(draftOpportunityFilter);
+  };
+
+  const handleResetOpportunityFilter = () => {
+    const emptyFilter = { search: '', status: '', type: '', source: '' };
+    setDraftOpportunityFilter(emptyFilter);
+    setOpportunityFilter(emptyFilter);
+  };
+
+  const filteredOpportunityCount = filteredOpportunities.length;
+  const opportunityStartDisplay = filteredOpportunityCount === 0 ? 0 : 1;
+  const opportunityEndDisplay = filteredOpportunityCount;
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 mb-6">
@@ -412,15 +466,15 @@ export function OpportunityManagementView({
         </button>
       </div>
 
-      <div className="mb-6 pb-6 border-b border-slate-200">
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm p-5">
         <div className="flex flex-wrap gap-x-6 gap-y-5">
           <div className="space-y-1.5 flex-1 min-w-[200px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">综合搜索</label>
             <input
               type="text"
               placeholder="商机名称/联系人"
-              value={opportunityFilter.search}
-              onChange={(event) => setOpportunityFilter({ ...opportunityFilter, search: event.target.value })}
+              value={draftOpportunityFilter.search}
+              onChange={(event) => setDraftOpportunityFilter({ ...draftOpportunityFilter, search: event.target.value })}
               className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-slate-400"
             />
           </div>
@@ -429,8 +483,8 @@ export function OpportunityManagementView({
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">商机状态</label>
             <div className="relative">
               <select
-                value={opportunityFilter.status}
-                onChange={(event) => setOpportunityFilter({ ...opportunityFilter, status: event.target.value })}
+                value={draftOpportunityFilter.status}
+                onChange={(event) => setDraftOpportunityFilter({ ...draftOpportunityFilter, status: event.target.value })}
                 className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
               >
                 <option value="">全部状态</option>
@@ -447,7 +501,11 @@ export function OpportunityManagementView({
           <div className="space-y-1.5 flex-1 min-w-[150px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">客户类型</label>
             <div className="relative">
-              <select className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer">
+              <select
+                value={draftOpportunityFilter.type || ''}
+                onChange={(event) => setDraftOpportunityFilter({ ...draftOpportunityFilter, type: event.target.value })}
+                className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+              >
                 <option value="">全部类型</option>
                 <option value="库内客户">库内客户</option>
                 <option value="库外客户">库外客户</option>
@@ -459,7 +517,11 @@ export function OpportunityManagementView({
           <div className="space-y-1.5 flex-1 min-w-[150px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">商机来源</label>
             <div className="relative">
-              <select className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer">
+              <select
+                value={draftOpportunityFilter.source || ''}
+                onChange={(event) => setDraftOpportunityFilter({ ...draftOpportunityFilter, source: event.target.value })}
+                className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+              >
                 <option value="">全部来源</option>
                 <option value="主动开发">主动开发</option>
                 <option value="老客户复购">老客户复购</option>
@@ -469,25 +531,30 @@ export function OpportunityManagementView({
               <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
           </div>
+
+          <div className="flex items-end gap-2 min-w-[220px]">
+            <button
+              type="button"
+              onClick={handleApplyOpportunityFilter}
+              className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+            >
+              查询
+            </button>
+            <button
+              type="button"
+              onClick={handleResetOpportunityFilter}
+              className="px-4 py-1.5 border border-slate-300 text-slate-700 text-sm rounded hover:bg-slate-50 transition-colors"
+            >
+              重置
+            </button>
+          </div>
         </div>
 
-        <div className="mt-5 flex justify-end gap-3">
-          <button className="px-4 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 hover:text-slate-900 transition-colors">
-            重置
-          </button>
-          <button className="px-4 py-1.5 text-sm font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors">
-            查询
-          </button>
-        </div>
       </div>
 
       <div className="flex flex-col">
         <div className="pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-wrap gap-2"></div>
-          <button className="flex items-center gap-2 px-3 py-1.5 text-sm border border-slate-300 rounded text-slate-600 bg-white hover:bg-slate-50 transition-colors">
-            <Filter className="w-4 h-4 text-slate-400" />
-            筛选
-          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -550,7 +617,7 @@ export function OpportunityManagementView({
 
         <div className="py-4 flex items-center justify-between">
           <div className="text-sm text-slate-500">
-            显示 <span className="font-medium text-slate-900">1</span> 至 <span className="font-medium text-slate-900">4</span> 条，共 <span className="font-medium text-slate-900">4</span> 条数据
+            显示 <span className="font-medium text-slate-900">{opportunityStartDisplay}</span> 至 <span className="font-medium text-slate-900">{opportunityEndDisplay}</span> 条，共 <span className="font-medium text-slate-900">{filteredOpportunityCount}</span> 条数据
           </div>
           <div className="flex gap-1">
             <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors" disabled>上一页</button>
@@ -571,9 +638,13 @@ interface OrderManagementViewProps {
   orderFilter: any;
   setOrderFilter: React.Dispatch<React.SetStateAction<any>>;
   filteredOrders: any[];
+  locationData: Record<string, Record<string, string[]>>;
   onOpenAddOrder: () => void;
+  onOpenAttachmentViewer: (inquiryNo: string) => void;
+  onSaveOrderDraft: (order: any) => void;
   onShowInquiryConfirm: () => void;
   onClaimOrder: (order: any) => void;
+  submittedInquiries?: Record<string, any>;
 }
 
 export function OrderManagementView({
@@ -584,10 +655,88 @@ export function OrderManagementView({
   orderFilter,
   setOrderFilter,
   filteredOrders,
+  locationData,
   onOpenAddOrder,
+  onOpenAttachmentViewer,
+  onSaveOrderDraft,
   onShowInquiryConfirm,
   onClaimOrder,
+  submittedInquiries = {},
 }: OrderManagementViewProps) {
+  const isNewOrder = Boolean(selectedOrderForDetail?.isNew);
+  const [draftOrderFilter, setDraftOrderFilter] = React.useState(orderFilter);
+
+  React.useEffect(() => {
+    setDraftOrderFilter(orderFilter);
+  }, [orderFilter]);
+
+  const updateSelectedOrder = (patch: Record<string, any>) => {
+    setSelectedOrderForDetail((prev: any) => ({ ...prev, ...patch }));
+  };
+  const selectedProvince = selectedOrderForDetail?.province || '';
+  const selectedCity = selectedOrderForDetail?.city || '';
+  const availableCities = selectedProvince ? Object.keys(locationData[selectedProvince] || {}) : [];
+  const availableDistricts = selectedProvince && selectedCity ? locationData[selectedProvince]?.[selectedCity] || [] : [];
+  const inquiryResult = submittedInquiries[selectedOrderForDetail?.id || ''];
+  const inquiryFormData = inquiryResult?.formData;
+  const requiredFieldsComplete = Boolean(
+    selectedOrderForDetail?.customer &&
+      selectedOrderForDetail?.province &&
+      selectedOrderForDetail?.city &&
+      selectedOrderForDetail?.district &&
+      selectedOrderForDetail?.industry &&
+      selectedOrderForDetail?.contact &&
+      selectedOrderForDetail?.phone,
+  );
+
+  const renderReadonlyValue = (value: any, suffix = '') => {
+    if (value === undefined || value === null || value === '' || value === '0') {
+      return '待客户填写';
+    }
+
+    return `${value}${suffix}`;
+  };
+
+  const summarizeCheckedItems = (items: Array<{ name: string; checked: boolean; ratio: string }>) => {
+    const selectedItems = (items || []).filter((item) => item.checked);
+    if (selectedItems.length === 0) {
+      return '待客户填写';
+    }
+
+    return selectedItems
+      .map((item) => `${item.name}${item.ratio && item.ratio !== '0' ? ` ${item.ratio}%` : ''}`)
+      .join('；');
+  };
+
+  const summarizeToggleGroups = (items: Array<{ key: string; label: string; revenueKey?: string }>) => {
+    if (!inquiryFormData) {
+      return '待客户填写';
+    }
+
+    const selectedItems = items
+      .filter((item) => inquiryFormData[item.key])
+      .map((item) => {
+        const revenueValue = item.revenueKey ? inquiryFormData[item.revenueKey] : '';
+        return `${item.label}${revenueValue && revenueValue !== '0' ? `（${revenueValue}万元）` : ''}`;
+      });
+
+    return selectedItems.length > 0 ? selectedItems.join('；') : '待客户填写';
+  };
+
+  const handleApplyOrderFilter = () => {
+    setOrderFilter(draftOrderFilter);
+  };
+
+  const handleResetOrderFilter = () => {
+    const emptyFilter = { search: '', status: '', source: '' };
+    setDraftOrderFilter(emptyFilter);
+    setOrderFilter(emptyFilter);
+  };
+
+  const filteredOrderCount = filteredOrders.length;
+  const startDisplay = filteredOrderCount === 0 ? 0 : 1;
+  const endDisplay = filteredOrderCount;
+
   return (
     <>
       {!selectedOrderForDetail && (
@@ -597,13 +746,29 @@ export function OrderManagementView({
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all active:scale-[0.98]"
           >
             <Plus className="w-4 h-4" />
-            新增订单
+            新增询价单
           </button>
         </div>
       )}
 
       {selectedOrderForDetail ? (
         <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col h-full relative">
+          <div className="mb-3 flex items-center gap-1 border-b border-slate-200 bg-white px-3 py-2">
+            <button
+              type="button"
+              onClick={() => setSelectedOrderForDetail(null)}
+              className="rounded px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+            >
+              询价单列表
+            </button>
+            <button
+              type="button"
+              className="rounded border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-900"
+            >
+              {isNewOrder ? '新增询价单' : selectedOrderForDetail.id}
+            </button>
+          </div>
+
           <div className="sticky top-0 -mx-6 -mt-6 lg:-mx-8 lg:-mt-6 pt-6 px-6 lg:px-8 bg-slate-50 z-40 pb-3">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-3 flex items-center justify-between gap-6">
               <div className="flex items-center gap-3 min-w-0">
@@ -614,7 +779,7 @@ export function OrderManagementView({
                   <ClipboardList className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">订单编号</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">询价单编号</div>
                   <div className="text-sm font-bold text-slate-900 truncate">{selectedOrderForDetail.id}</div>
                 </div>
               </div>
@@ -624,11 +789,11 @@ export function OrderManagementView({
               <div className="hidden md:grid grid-cols-3 gap-x-8 gap-y-1 flex-1">
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">合同名称</div>
-                  <div className="text-xs font-medium text-slate-900 truncate">{selectedOrderForDetail.contract}</div>
+                  <div className="text-xs font-medium text-slate-900 truncate">{selectedOrderForDetail.contract || '--'}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">客户名称</div>
-                  <div className="text-xs font-medium text-slate-900 truncate">{selectedOrderForDetail.customer}</div>
+                  <div className="text-xs font-medium text-slate-900 truncate">{selectedOrderForDetail.customer || '--'}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">订单来源</div>
@@ -641,7 +806,7 @@ export function OrderManagementView({
               <div className="flex items-center gap-4 shrink-0">
                 <div className="text-right">
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">保单号</div>
-                  <div className="text-sm font-mono font-bold text-blue-600">{selectedOrderForDetail.policyNo}</div>
+                  <div className="text-sm font-mono font-bold text-blue-600">{selectedOrderForDetail.policyNo || '--'}</div>
                 </div>
               </div>
             </div>
@@ -649,181 +814,345 @@ export function OrderManagementView({
 
           <div className="flex gap-6 items-start flex-1 mt-4">
             <div className="flex-1 space-y-6 pb-24">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-blue-500" />
-                    基础信息
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">合同名称</div>
-                      <div className="text-sm text-slate-900">{selectedOrderForDetail.contract}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">订单来源</div>
-                      <div className="text-sm text-slate-900">{selectedOrderForDetail.source}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">签订日期</div>
-                      <div className="text-sm text-slate-900">{selectedOrderForDetail.date}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">保单号</div>
-                      <div className="text-sm font-mono text-slate-900">{selectedOrderForDetail.policyNo}</div>
-                    </div>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                <div className="flex items-center justify-between gap-4 mb-5">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <Users className="w-4 h-4 text-blue-500" />
+                      客户基本信息
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-500">新建询价单阶段仅允许维护客户主数据，客户代码在发送问询单后自动生成。</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">客户代码</div>
+                    <div className="mt-1 text-sm font-mono font-semibold text-slate-900">{selectedOrderForDetail.customerCode || '发送后自动生成'}</div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-blue-500" />
-                    客户信息
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">客户名称</div>
-                      <div className="text-sm text-slate-900">{selectedOrderForDetail.customer}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">客户代码</div>
-                      <div className="text-sm text-slate-900">{selectedOrderForDetail.customerCode || '--'}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">联系人</div>
-                      <div className="text-sm text-slate-900">张经理</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-bold">联系电话</div>
-                      <div className="text-sm text-slate-900">138****8888</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">客户名称</div>
+                    <input
+                      type="text"
+                      value={selectedOrderForDetail.customer || ''}
+                      onChange={(event) => updateSelectedOrder({ customer: event.target.value })}
+                      placeholder="请输入客户名称"
+                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">客户行业</div>
+                    <select
+                      value={selectedOrderForDetail.industry || ''}
+                      onChange={(event) => updateSelectedOrder({ industry: event.target.value })}
+                      className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">请选择行业</option>
+                      <option value="物流运输">物流运输</option>
+                      <option value="网约车">网约车</option>
+                      <option value="公共交通">公共交通</option>
+                      <option value="制造业">制造业</option>
+                      <option value="商贸流通">商贸流通</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">联系人</div>
+                    <input
+                      type="text"
+                      value={selectedOrderForDetail.contact || ''}
+                      onChange={(event) => updateSelectedOrder({ contact: event.target.value })}
+                      placeholder="请输入联系人"
+                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">联系电话</div>
+                    <input
+                      type="text"
+                      value={selectedOrderForDetail.phone || ''}
+                      onChange={(event) => updateSelectedOrder({ phone: event.target.value })}
+                      placeholder="请输入联系电话"
+                      className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="md:col-span-2 xl:col-span-2">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">客户属地</div>
+                    <div className="mt-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <select
+                        value={selectedProvince}
+                        onChange={(event) =>
+                          updateSelectedOrder({
+                            province: event.target.value,
+                            city: '',
+                            district: '',
+                          })
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      >
+                        <option value="">请选择省份</option>
+                        {Object.keys(locationData).map((province) => (
+                          <option key={province} value={province}>
+                            {province}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={selectedCity}
+                        onChange={(event) =>
+                          updateSelectedOrder({
+                            city: event.target.value,
+                            district: '',
+                          })
+                        }
+                        disabled={!selectedProvince}
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        <option value="">请选择城市</option>
+                        {availableCities.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={selectedOrderForDetail.district || ''}
+                        onChange={(event) => updateSelectedOrder({ district: event.target.value })}
+                        disabled={!selectedCity}
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        <option value="">请选择区县</option>
+                        {availableDistricts.map((district) => (
+                          <option key={district} value={district}>
+                            {district}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#f5f3ff] rounded-2xl border border-purple-100 p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-800 mb-12">合同执行进度</h3>
-                <div className="relative flex justify-between items-center px-12">
-                  <div className="absolute left-12 right-12 h-1 bg-blue-400 top-1/2 -translate-y-1/2"></div>
-                  {[
-                    { title: '合同签订', detail: '经办人：', name: '王经理' },
-                    { title: '系统录入', detail: '执行人：', name: '管理员' },
-                    { title: '增价询价单上传', detail: '上传人：', name: '业务员' },
-                    { title: '财务审核', detail: '审核人：', name: '财务部' },
-                    { title: '执行中', detail: '负责人：', name: '运营部' },
-                  ].map((step, index) => {
-                    const isActive = index === 2;
-                    const isCompleted = index < 2;
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="border-b border-slate-200 px-5 py-4 bg-slate-50/80">
+                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-500" />
+                    客户问询回填信息
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">以下内容与客户问询表单一致，本页面仅展示回填结果，不允许销售侧录入。</p>
+                </div>
 
-                    return (
-                      <div key={index} className="relative flex flex-col items-center z-10">
-                        <div className={`absolute -top-8 whitespace-nowrap text-[11px] font-bold ${isActive || isCompleted ? 'text-blue-600' : 'text-slate-400'}`}>
-                          {step.title}
-                        </div>
+                <div className="divide-y divide-slate-200">
+                  <section className="p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">01</div>
+                        <h4 className="mt-1 text-sm font-semibold text-slate-900">投保人/被保险人基本信息</h4>
+                      </div>
+                      <span className="text-xs text-slate-500">由客户填写后回写</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">企业名称</div>
+                        <div className="mt-1 font-medium text-slate-900">{renderReadonlyValue(inquiryFormData?.companyName)}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">在职员工人数</div>
+                        <div className="mt-1 font-medium text-slate-900">{renderReadonlyValue(inquiryFormData?.employeeCount, '人')}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">自有车辆数</div>
+                        <div className="mt-1 font-medium text-slate-900">{renderReadonlyValue(inquiryFormData?.ownVehicleCount, '辆')}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">上年度营业收入</div>
+                        <div className="mt-1 font-medium text-slate-900">{renderReadonlyValue(inquiryFormData?.lastYearRevenue, '万元')}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2 xl:col-span-4">
+                        <div className="text-xs text-slate-500">预计保险区间内营业收入</div>
+                        <div className="mt-1 font-medium text-slate-900">{renderReadonlyValue(inquiryFormData?.expectedRevenue, '万元')}</div>
+                      </div>
+                    </div>
+                  </section>
 
-                        <div className={`w-5 h-5 rounded-full border-4 border-white shadow-sm transition-colors ${
-                          isActive ? 'bg-blue-500 ring-4 ring-blue-500/20' : isCompleted ? 'bg-blue-500' : 'bg-slate-200'
-                        }`}></div>
-
-                        <div className="absolute top-8 whitespace-nowrap text-center text-[10px] text-slate-500 leading-tight">
-                          <div>{step.detail}</div>
-                          <div className="font-medium">{step.name}</div>
+                  <section className="p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">02</div>
+                        <h4 className="mt-1 text-sm font-semibold text-slate-900">核心保险需求</h4>
+                      </div>
+                      <span className="text-xs text-slate-500">由客户填写后回写</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">每次事故赔偿限额</div>
+                        <div className="mt-1 font-medium text-slate-900">{renderReadonlyValue(inquiryFormData?.singleLimit, '万元')}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">预计起保日期</div>
+                        <div className="mt-1 font-medium text-slate-900">{renderReadonlyValue(inquiryFormData?.startDate)}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2 xl:col-span-2">
+                        <div className="text-xs text-slate-500">扩展责任</div>
+                        <div className="mt-1 font-medium text-slate-900">
+                          {summarizeToggleGroups([
+                            { key: 'expandCold', label: '冷藏运输', revenueKey: 'coldRevenue' },
+                            { key: 'expandXinjiang', label: '新疆地区承保', revenueKey: 'xinjiangRevenue' },
+                            { key: 'expandQinghai', label: '青海地区承保', revenueKey: 'qinghaiRevenue' },
+                            { key: 'expandTibet', label: '西藏地区承保', revenueKey: 'tibetRevenue' },
+                            { key: 'expandSpecialVehicle', label: '临牌/超牌/不可拆卸货物车型' },
+                          ])}
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2 xl:col-span-4">
+                        <div className="text-xs text-slate-500">其他保险需求</div>
+                        <div className="mt-1 font-medium text-slate-900 whitespace-pre-wrap">{renderReadonlyValue(inquiryFormData?.otherNeeds)}</div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">03</div>
+                        <h4 className="mt-1 text-sm font-semibold text-slate-900">被保险人经营情况</h4>
+                      </div>
+                      <span className="text-xs text-slate-500">由客户填写后回写</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">托运人结构</div>
+                        <div className="mt-1 font-medium text-slate-900">{summarizeCheckedItems(inquiryFormData?.shippers || [])}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">承托人结构</div>
+                        <div className="mt-1 font-medium text-slate-900">{summarizeCheckedItems(inquiryFormData?.carriers || [])}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">集装箱/箱式货车业务占比</div>
+                        <div className="mt-1 font-medium text-slate-900">{renderReadonlyValue(inquiryFormData?.boxTruckRatio, '%')}</div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">运输货物品类</div>
+                        <div className="mt-1 font-medium text-slate-900">
+                          {summarizeToggleGroups([
+                            { key: 'fragile', label: '易碎品', revenueKey: 'fragileRevenue' },
+                            { key: 'autoParts', label: '汽车配件', revenueKey: 'autoPartsRevenue' },
+                            { key: 'machinery', label: '机械设备', revenueKey: 'machineryRevenue' },
+                            { key: 'steel', label: '钢材', revenueKey: 'steelRevenue' },
+                            { key: 'food', label: '常温食品饮料', revenueKey: 'foodRevenue' },
+                            { key: 'electronics', label: '电子设备', revenueKey: 'electronicsRevenue' },
+                            { key: 'semiconductor', label: '半导体零配件', revenueKey: 'semiconductorRevenue' },
+                          ])}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+                        <div className="text-xs text-slate-500">运输路线</div>
+                        <div className="mt-1 font-medium text-slate-900">
+                          {summarizeToggleGroups([
+                            { key: 'yunGui', label: '云南/贵州', revenueKey: 'yunGuiRevenue' },
+                            { key: 'ganNing', label: '甘肃/宁夏', revenueKey: 'ganNingRevenue' },
+                            { key: 'innerMongolia', label: '内蒙古', revenueKey: 'innerMongoliaRevenue' },
+                            { key: 'jiHei', label: '吉林/黑龙江', revenueKey: 'jiHeiRevenue' },
+                            { key: 'hainan', label: '海南', revenueKey: 'hainanRevenue' },
+                            { key: 'chuanYu', label: '四川/重庆', revenueKey: 'chuanYuRevenue' },
+                          ])}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="p-5">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">04</div>
+                        <h4 className="mt-1 text-sm font-semibold text-slate-900">出险及保险情况（2023-2025）</h4>
+                      </div>
+                      <span className="text-xs text-slate-500">由客户填写后回写</span>
+                    </div>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">历史出险记录</div>
+                        <div className="mt-2 space-y-2 text-slate-900">
+                          {(inquiryFormData?.claims || [
+                            { year: '2023' },
+                            { year: '2024' },
+                            { year: '2025' },
+                          ]).map((claim: any) => (
+                            <div key={claim.year} className="rounded border border-slate-200 bg-white px-3 py-2">
+                              <div className="font-medium text-slate-800">{claim.year}年</div>
+                              <div className="mt-1 text-xs text-slate-500">保单号：{renderReadonlyValue(claim.policyNo)}</div>
+                              <div className="text-xs text-slate-500">保险公司：{renderReadonlyValue(claim.insurer)}</div>
+                              <div className="text-xs text-slate-500">出险次数：{renderReadonlyValue(claim.count, '次')}</div>
+                              <div className="text-xs text-slate-500">赔付金额：{renderReadonlyValue(claim.amount, '元')}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-xs text-slate-500">系统及声明</div>
+                        <div className="mt-2 space-y-2 text-sm text-slate-900">
+                          <div className="rounded border border-slate-200 bg-white px-3 py-2">TMS系统：{inquiryFormData ? (inquiryFormData.useTMS ? '已使用' : '未使用') : '待客户填写'}</div>
+                          <div className="rounded border border-slate-200 bg-white px-3 py-2">ADAS设备：{inquiryFormData ? (inquiryFormData.useADAS ? '已安装' : '未安装') : '待客户填写'}</div>
+                          <div className="rounded border border-slate-200 bg-white px-3 py-2">投保声明确认：{inquiryFormData ? (inquiryFormData.declarationConfirmed ? '已确认' : '未确认') : '待客户填写'}</div>
+                          <div className="rounded border border-dashed border-slate-300 bg-white px-3 py-2 text-xs text-slate-500">
+                            客户完成手机端问询单后，以上信息自动回写到当前详情页。
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
                 </div>
-                <div className="h-10"></div>
               </div>
 
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-blue-500" />
-                  订单关键信息
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">签约价值</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">¥</span>
-                      <input type="text" value={orderDetailEdit.contractValue} onChange={(event) => setOrderDetailEdit({ ...orderDetailEdit, contractValue: event.target.value })} className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">实际价值</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">¥</span>
-                      <input type="text" value={orderDetailEdit.actualValue} onChange={(event) => setOrderDetailEdit({ ...orderDetailEdit, actualValue: event.target.value })} className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">是否开票</label>
-                    <select value={orderDetailEdit.isInvoiced} onChange={(event) => setOrderDetailEdit({ ...orderDetailEdit, isInvoiced: event.target.value })} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
-                      <option value="是">是</option>
-                      <option value="否">否</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">发票类型</label>
-                    <select value={orderDetailEdit.invoiceType} onChange={(event) => setOrderDetailEdit({ ...orderDetailEdit, invoiceType: event.target.value })} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
-                      <option value="增值税专用发票">增值税专用发票</option>
-                      <option value="增值税普通发票">增值税普通发票</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">税点</label>
-                    <select value={orderDetailEdit.taxPoint} onChange={(event) => setOrderDetailEdit({ ...orderDetailEdit, taxPoint: event.target.value })} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
-                      <option value="3%">3%</option>
-                      <option value="6%">6%</option>
-                      <option value="9%">9%</option>
-                      <option value="13%">13%</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">备注信息</h3>
-                <textarea placeholder="添加订单备注..." className="w-full h-32 p-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none" />
-                <div className="flex justify-end mt-3">
-                  <button className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors">
-                    保存备注
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
-          <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-end items-center px-6 lg:px-8 gap-4">
-            <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors">
-              <Upload className="w-4 h-4" />
-              上传附件
+          <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-between items-center px-6 lg:px-8 gap-4">
+            <button
+              type="button"
+              onClick={() => onOpenAttachmentViewer(selectedOrderForDetail.id)}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              查看附件
             </button>
-            <button onClick={onShowInquiryConfirm} className="flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors">
-              <Mail className="w-4 h-4" />
-              发送问询单
-            </button>
-            <button className="flex items-center gap-2 px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors">
+
+            <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => onSaveOrderDraft(selectedOrderForDetail)}
+              className="flex items-center gap-2 px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+            >
               <Save className="w-4 h-4" />
               暂存
             </button>
-            <button className="flex items-center gap-2 px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => {
+                if (isNewOrder) {
+                  onSaveOrderDraft(selectedOrderForDetail);
+                }
+                onShowInquiryConfirm();
+              }}
+              disabled={!requiredFieldsComplete}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               <Send className="w-4 h-4" />
-              提交审核
+              发送问询单
             </button>
+            </div>
           </div>
         </div>
       ) : (
         <>
-          <div className="mb-6 pb-6 border-b border-slate-200">
+          <div className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm p-5">
             <div className="flex flex-wrap gap-x-6 gap-y-5">
               <div className="space-y-1.5 flex-1 min-w-[200px]">
                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">综合搜索</label>
                 <input
                   type="text"
-                  placeholder="订单编号/合同名称/客户名称"
-                  value={orderFilter.search}
-                  onChange={(event) => setOrderFilter({ ...orderFilter, search: event.target.value })}
+                  placeholder="询价单编号/客户名称"
+                  value={draftOrderFilter.search}
+                  onChange={(event) => setDraftOrderFilter({ ...draftOrderFilter, search: event.target.value })}
                   className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-slate-400"
                 />
               </div>
@@ -832,8 +1161,8 @@ export function OrderManagementView({
                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">订单来源</label>
                 <div className="relative">
                   <select
-                    value={orderFilter.source}
-                    onChange={(event) => setOrderFilter({ ...orderFilter, source: event.target.value })}
+                    value={draftOrderFilter.source}
+                    onChange={(event) => setDraftOrderFilter({ ...draftOrderFilter, source: event.target.value })}
                     className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                   >
                     <option value="">全部来源</option>
@@ -849,30 +1178,37 @@ export function OrderManagementView({
                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">订单状态</label>
                 <div className="relative">
                   <select
-                    value={orderFilter.status}
-                    onChange={(event) => setOrderFilter({ ...orderFilter, status: event.target.value })}
+                    value={draftOrderFilter.status}
+                    onChange={(event) => setDraftOrderFilter({ ...draftOrderFilter, status: event.target.value })}
                     className="w-full appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-300 rounded bg-white hover:border-slate-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                   >
                     <option value="">全部状态</option>
-                    <option value="待签署">待签署</option>
-                    <option value="已生效">已生效</option>
-                    <option value="执行中">执行中</option>
-                    <option value="已完成">已完成</option>
-                    <option value="已作废">已作废</option>
+                    <option value="已建单">已建单</option>
+                    <option value="已发送">已发送</option>
+                    <option value="已回填">已回填</option>
                   </select>
                   <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
               </div>
+
+              <div className="flex items-end gap-2 min-w-[220px]">
+                <button
+                  type="button"
+                  onClick={handleApplyOrderFilter}
+                  className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                >
+                  查询
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetOrderFilter}
+                  className="px-4 py-1.5 border border-slate-300 text-slate-700 text-sm rounded hover:bg-slate-50 transition-colors"
+                >
+                  重置
+                </button>
+              </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-3">
-              <button onClick={() => setOrderFilter({ search: '', status: '', source: '' })} className="px-4 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 hover:text-slate-900 transition-colors">
-                重置
-              </button>
-              <button className="px-4 py-1.5 text-sm font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors">
-                查询
-              </button>
-            </div>
           </div>
 
           <div className="flex flex-col">
@@ -884,12 +1220,11 @@ export function OrderManagementView({
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
                   <tr className="bg-slate-50/50 border-y border-slate-200 text-xs uppercase tracking-wider text-slate-600 font-semibold">
-                    <th className="px-4 py-3">订单编号</th>
+                    <th className="px-4 py-3">询价单编号</th>
                     <th className="px-4 py-3">订单来源</th>
-                    <th className="px-4 py-3">合同信息</th>
                     <th className="px-4 py-3">客户信息</th>
-                    <th className="px-4 py-3">合同价值</th>
-                    <th className="px-4 py-3">签订日期</th>
+                    <th className="px-4 py-3">保费估值</th>
+                    <th className="px-4 py-3">创建日期</th>
                     <th className="px-4 py-3">状态</th>
                     <th className="px-4 py-3 text-right">操作</th>
                   </tr>
@@ -905,13 +1240,16 @@ export function OrderManagementView({
                           {row.source}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-medium text-slate-900">{row.contract}</td>
                       <td className="px-4 py-3 text-slate-600">{row.customer}</td>
                       <td className="px-4 py-3 text-emerald-600 font-medium">{row.value}</td>
                       <td className="px-4 py-3 text-slate-500">{row.date}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          row.status === '已生效' || row.status === '执行中' ? 'bg-emerald-100 text-emerald-700' : row.status === '待签署' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'
+                          row.status === '已回填'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : row.status === '已发送'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-amber-100 text-amber-700'
                         }`}>
                           {row.status}
                         </span>
@@ -941,7 +1279,7 @@ export function OrderManagementView({
 
             <div className="py-4 flex items-center justify-between">
               <div className="text-sm text-slate-500">
-                显示 <span className="font-medium text-slate-900">1</span> 至 <span className="font-medium text-slate-900">3</span> 条，共 <span className="font-medium text-slate-900">3</span> 条数据
+                显示 <span className="font-medium text-slate-900">{startDisplay}</span> 至 <span className="font-medium text-slate-900">{endDisplay}</span> 条，共 <span className="font-medium text-slate-900">{filteredOrderCount}</span> 条数据
               </div>
               <div className="flex gap-1">
                 <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors" disabled>上一页</button>

@@ -1,22 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronDown, Search, Filter, MoreHorizontal, Plus, Upload, FileText, AlertCircle, Check, ClipboardList, Building2, Trash2 } from 'lucide-react';
-
-const mockClaimsData = [
-  { id: 'CLM-20260301-001', customerCode: 'SF001', policyNo: 'POL-2026-8899001', company: '平安财险', type: '物流责任险', insured: '顺丰速运, 顺丰航空', startTime: '2026-01-01', endTime: '2026-12-31', status: '待处理' },
-  { id: 'CLM-20260302-002', customerCode: 'KY003', policyNo: 'POL-2026-8899002', company: '太平洋产险', type: '物流责任险', insured: '跨越速运', startTime: '2026-02-15', endTime: '2027-02-14', status: '处理中' },
-  { id: 'CLM-20260305-003', customerCode: 'DD002', policyNo: 'POL-2026-8899003', company: '人保财险', type: '物流责任险', insured: '滴滴货运', startTime: '2025-06-01', endTime: '2026-05-31', status: '已结案' },
-];
+import { ChevronLeft, ChevronDown, Search, MoreHorizontal, Plus, Upload, AlertCircle, Check, ClipboardList, Building2, Trash2 } from 'lucide-react';
 
 import { locationData } from '../constants/locations';
 
-export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selectedOrder?: any, onSubmit: (claim: any) => void }) {
+export default function ClaimsAssistance({
+  selectedOrder,
+  claimAssistPool,
+  appraisalCases,
+  onDraftSave,
+  onSubmit,
+}: {
+  selectedOrder?: any;
+  claimAssistPool?: any[];
+  appraisalCases?: any[];
+  onDraftSave: (claim: any) => void;
+  onSubmit: (claim: any) => void;
+}) {
   const [selectedClaim, setSelectedClaim] = useState<any>(null);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
   // If a selectedOrder is passed, pre-fill it as a new claim
   useEffect(() => {
     if (selectedOrder) {
+      const fallbackAssistNo = `LAS-${Date.now()}`;
       setSelectedClaim({
-        id: 'NEW-CLAIM',
+        id: selectedOrder.id || selectedOrder.assistNo,
+        assistNo: selectedOrder.assistNo || fallbackAssistNo,
         customerCode: selectedOrder.customerCode,
         policyNo: selectedOrder.policyNo,
         company: '平安财险', // Default or from order
@@ -24,13 +33,22 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
         insured: selectedOrder.customer,
         startTime: '2026-01-01',
         endTime: '2026-12-31',
-        status: '理赔申请'
       });
     }
   }, [selectedOrder]);
+  const displayClaimsData = [
+    ...(claimAssistPool || []).map((row) => ({
+      ...row,
+      id: row.id || row.assistNo,
+      relatedCaseNo: row.relatedCaseNo || appraisalCases?.find((item) => item.assistNo === row.assistNo)?.id || '--',
+      reportTime: row.reportTime || row.updatedAt || '--',
+      reporter: row.reporter || '理赔协助',
+    })),
+  ].filter((item, index, arr) => arr.findIndex((other) => other.assistNo === item.assistNo) === index);
   const [currentStep, setCurrentStep] = useState(1);
   const [showIndirectLoss, setShowIndirectLoss] = useState(false);
   const [cargoList, setCargoList] = useState([{ id: 1, name: '', quantity: '', unit: '', price: '', amount: '', type: '' }]);
+  const [logisticsCompanies, setLogisticsCompanies] = useState([{ id: 1, name: '' }]);
   const [accidentInfo, setAccidentInfo] = useState({
     time: '',
     reportTime: '',
@@ -104,6 +122,25 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
     setCargoList(cargoList.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
+  const addLogisticsCompany = () => {
+    setLogisticsCompanies((prev) => [...prev, { id: Date.now(), name: '' }]);
+  };
+
+  const updateLogisticsCompany = (id: number, value: string) => {
+    setLogisticsCompanies((prev) => prev.map((item) => (item.id === id ? { ...item, name: value } : item)));
+  };
+
+  const isLocked = ['已提交', '审核中', '已通过'].includes(selectedClaim?.status || '');
+
+  const handleSubmitConfirm = () => {
+    setShowSubmitConfirm(false);
+    onSubmit({
+      ...selectedClaim,
+      status: '已提交',
+    });
+    setTimeout(() => setSelectedClaim(null), 300);
+  };
+
   if (selectedClaim) {
     return (
       <div className="flex flex-col h-full relative flex-1">
@@ -115,8 +152,8 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
                 <Building2 className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">客户名称</div>
-                <div className="text-sm font-bold text-slate-900 truncate">{selectedClaim.insured.split(',')[0]}</div>
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">理赔协助编号</div>
+                <div className="text-sm font-bold text-slate-900 truncate">{selectedClaim.assistNo || '--'}</div>
               </div>
             </div>
 
@@ -157,7 +194,7 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
           </div>
         </div>
 
-        <div className="flex gap-6 items-start flex-1">
+        <div className={`flex gap-6 items-start flex-1 ${isLocked ? 'pointer-events-none' : ''}`}>
           {/* Main Content Area */}
           <div className="flex-1 space-y-6 pb-24">
             {/* 案件处理进度 */}
@@ -217,9 +254,13 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
               </div>
               <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100">
                 <p className="text-xs text-slate-700 leading-relaxed italic">
-                  "初步审核通过，请补充上传事故现场的高清照片以及驾驶员的从业资格证扫描件。"
+                  {selectedClaim.latestReviewComment
+                    ? `"${selectedClaim.latestReviewComment}"`
+                    : '"暂无审核意见"'}
                 </p>
-                <div className="mt-2 text-[10px] text-slate-400 text-right">— 审核员 王五 2026-03-13</div>
+                <div className="mt-2 text-[10px] text-slate-400 text-right">
+                  — 审核状态 {selectedClaim.status || '--'} {selectedClaim.updatedAt || ''}
+                </div>
               </div>
             </div>
 
@@ -403,102 +444,53 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
             </div>
             
             <div className="p-6">
-              <div className="py-8">
-                  <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
-                    <div className="w-full sm:w-auto sm:flex-1 max-w-[180px] space-y-3">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center relative">
-                        <div className="text-[10px] font-bold text-blue-600 mb-1">发货人</div>
-                        <input type="text" placeholder="输入名称" className="w-full text-xs text-center bg-transparent border-b border-blue-200 focus:border-blue-500 outline-none" />
-                        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border border-blue-200 rounded-full flex items-center justify-center z-10">
-                          <Check className="w-2.5 h-2.5 text-blue-600" />
-                        </div>
-                      </div>
-                      <button className="w-full py-1 border border-dashed border-slate-300 rounded text-[10px] text-slate-500 hover:bg-slate-50 flex items-center justify-center gap-1">
-                        <Upload className="w-3 h-3" /> 上传凭证
-                      </button>
-                    </div>
-                    
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-6 h-px bg-slate-300"></div>
-                      <button className="w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
-                        <Plus className="w-3 h-3" />
-                      </button>
-                      <div className="w-6 h-px bg-slate-300"></div>
-                    </div>
-
-                    <div className="w-full sm:w-auto sm:flex-1 max-w-[180px] space-y-3">
-                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-center relative">
-                        <div className="text-[10px] font-bold text-indigo-600 mb-1">物流公司 (一级)</div>
-                        <input type="text" placeholder="输入名称" className="w-full text-xs text-center bg-transparent border-b border-indigo-200 focus:border-indigo-500 outline-none" />
-                      </div>
-                      <button className="w-full py-1 border border-dashed border-slate-300 rounded text-[10px] text-slate-500 hover:bg-slate-50 flex items-center justify-center gap-1">
-                        <Upload className="w-3 h-3" /> 上传凭证
-                      </button>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-6 h-px bg-slate-300"></div>
-                      <button className="w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
-                        <Plus className="w-3 h-3" />
-                      </button>
-                      <div className="w-6 h-px bg-slate-300"></div>
-                    </div>
-
-                    <div className="w-full sm:w-auto sm:flex-1 max-w-[180px] space-y-3">
-                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center relative">
-                        <div className="text-[10px] font-bold text-emerald-600 mb-1">承运车辆</div>
-                        <input type="text" placeholder="输入名称/车牌" className="w-full text-xs text-center bg-transparent border-b border-emerald-200 focus:border-emerald-500 outline-none" />
-                        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border border-emerald-200 rounded-full flex items-center justify-center z-10">
-                          <Check className="w-2.5 h-2.5 text-emerald-600" />
-                        </div>
-                      </div>
-                      <button className="w-full py-1 border border-dashed border-slate-300 rounded text-[10px] text-slate-500 hover:bg-slate-50 flex items-center justify-center gap-1">
-                        <Upload className="w-3 h-3" /> 上传凭证
-                      </button>
-                    </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 space-y-5">
+                <div className="flex flex-wrap items-center gap-3 xl:gap-4">
+                  <div className="w-full xl:w-[180px] rounded-xl border border-slate-300 bg-white px-4 py-3">
+                    <div className="text-[11px] font-bold text-slate-500 mb-2">发货方</div>
+                    <input type="text" placeholder="输入发货方名称" className="w-full bg-transparent text-sm text-slate-900 border-b border-slate-200 focus:border-blue-500 outline-none" />
                   </div>
-                  <div className="mt-6 text-center text-[10px] text-slate-400 font-medium">
-                    提示：点击中间的 "+" 号可增加多级分包关系
+
+                  <div className="hidden xl:flex items-center text-slate-300 text-lg">→</div>
+
+                  {logisticsCompanies.map((item, index) => (
+                    <React.Fragment key={item.id}>
+                      <div className="w-full xl:w-[180px] rounded-xl border border-slate-300 bg-white px-4 py-3">
+                        <div className="text-[11px] font-bold text-slate-500 mb-2">物流公司{logisticsCompanies.length > 1 ? ` ${index + 1}` : ''}</div>
+                        <input
+                          type="text"
+                          placeholder="输入物流公司名称"
+                          value={item.name}
+                          onChange={(e) => updateLogisticsCompany(item.id, e.target.value)}
+                          className="w-full bg-transparent text-sm text-slate-900 border-b border-slate-200 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      {index < logisticsCompanies.length - 1 && <div className="hidden xl:flex items-center text-slate-300 text-lg">→</div>}
+                    </React.Fragment>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={addLogisticsCompany}
+                    className="h-10 w-10 shrink-0 rounded-full border border-dashed border-slate-300 bg-white text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center"
+                    title="增加物流公司"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+
+                  <div className="hidden xl:flex items-center text-slate-300 text-lg">→</div>
+
+                  <div className="w-full xl:w-[180px] rounded-xl border border-slate-300 bg-white px-4 py-3">
+                    <div className="text-[11px] font-bold text-slate-500 mb-2">承运车辆</div>
+                    <input type="text" placeholder="输入车牌号/车队" className="w-full bg-transparent text-sm text-slate-900 border-b border-slate-200 focus:border-blue-500 outline-none" />
                   </div>
+
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">启运地</label>
-                    <div className="flex gap-2">
-                      <select className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                        <option value="">省</option>
-                        <option value="广东">广东省</option>
-                      </select>
-                      <select className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                        <option value="">市</option>
-                        <option value="深圳">深圳市</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">目的地</label>
-                    <div className="flex gap-2">
-                      <select className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                        <option value="">省</option>
-                        <option value="北京">北京市</option>
-                      </select>
-                      <select className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                        <option value="">市</option>
-                        <option value="北京">北京市</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 lg:col-span-2">
-                    <label className="text-sm font-medium text-slate-700">承托关系凭证 (运单、运输合同等)</label>
-                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer">
-                      <Upload className="w-6 h-6 mb-2 text-slate-400" />
-                      <span className="text-sm">点击或拖拽文件上传</span>
-                    </div>
-                  </div>
+                <div className="text-xs text-slate-400">
+                  如存在多级物流转包，可点击“+”继续补充物流公司节点。
                 </div>
+              </div>
               </div>
           </section>
 
@@ -526,13 +518,6 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
                     <input type="text" placeholder="联系电话" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
                   </div>
 
-                  <div className="space-y-1.5 lg:col-span-3">
-                    <label className="text-sm font-medium text-slate-700">车辆资料 (驾驶证、车辆行驶证、装车清单等)</label>
-                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer">
-                      <Upload className="w-6 h-6 mb-2 text-slate-400" />
-                      <span className="text-sm">点击或拖拽文件上传</span>
-                    </div>
-                  </div>
                 </div>
               </div>
           </section>
@@ -662,14 +647,6 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">货物损失凭证 (销售合同、发票、维修清单、维修发票等)</label>
-                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer">
-                      <Upload className="w-6 h-6 mb-2 text-slate-400" />
-                      <span className="text-sm">点击或拖拽文件上传</span>
-                    </div>
-                  </div>
-
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-medium text-slate-900">间接损失</h4>
@@ -775,20 +752,81 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
       </div>
 
       {/* Fixed Bottom Toolbar */}
-        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-end items-center px-6 lg:px-8 gap-4">
-          <button className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors">
+        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-between items-center px-6 lg:px-8 gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              const attachmentUrl = new URL(window.location.href);
+              attachmentUrl.searchParams.set('page', 'attachments');
+              attachmentUrl.searchParams.set('assistNo', selectedClaim.assistNo || '');
+              window.open(attachmentUrl.toString(), '_blank');
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            上传凭证
+          </button>
+          <div className="flex items-center gap-4">
+          <button
+            onClick={() => setSelectedClaim(null)}
+            className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+          >
+            返回列表
+          </button>
+          <button
+            onClick={() => {
+              onDraftSave({
+                ...selectedClaim,
+                status: '已暂存',
+              });
+              setSelectedClaim(null);
+            }}
+            disabled={isLocked}
+            className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-white"
+          >
             暂存
           </button>
           <button 
             onClick={() => {
-              onSubmit(selectedClaim);
-              setSelectedClaim(null);
+              setShowSubmitConfirm(true);
             }}
-            className="px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors"
+            disabled={isLocked}
+            className="px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
           >
             提交
           </button>
+          </div>
         </div>
+
+        {/* Submit Confirmation Dialog */}
+        {showSubmitConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                确认提交
+              </h3>
+              <p className="text-sm text-slate-600 mb-6">
+                提交后理赔协助将进入审批流程，页面变为只读，确定提交吗？
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowSubmitConfirm(false);
+                  }}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-md hover:bg-slate-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSubmitConfirm}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  确认
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -796,7 +834,7 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
   return (
     <div className="flex flex-col h-full">
       {/* Filter Section */}
-      <div className="mb-6 pb-6 border-b border-slate-200">
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm p-5">
         <div className="flex flex-wrap gap-x-6 gap-y-5">
           <div className="space-y-1.5 flex-1 min-w-[200px]">
             <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">综合搜索</label>
@@ -827,23 +865,21 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
           </div>
         </div>
         
-        <div className="mt-5 flex justify-end gap-3">
-          <button className="px-4 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 hover:text-slate-900 transition-colors">重置</button>
-          <button className="px-4 py-1.5 text-sm font-medium text-white bg-slate-900 rounded hover:bg-slate-800 transition-colors">查询</button>
-        </div>
       </div>
 
       {/* Table Section */}
       <div className="flex flex-col">
         <div className="pb-4 flex justify-between items-center">
-          <div className="text-sm text-slate-500">共找到 <span className="font-medium text-slate-900">{mockClaimsData.length}</span> 条理赔协助记录</div>
+          <div className="text-sm text-slate-500">共找到 <span className="font-medium text-slate-900">{displayClaimsData.length}</span> 条理赔协助记录</div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-slate-50/50 border-y border-slate-200 text-xs uppercase tracking-wider text-slate-600 font-semibold">
+                <th className="px-4 py-3">理赔协助编号</th>
                 <th className="px-4 py-3">保单号</th>
+                <th className="px-4 py-3">关联案件号</th>
                 <th className="px-4 py-3">保险公司</th>
                 <th className="px-4 py-3">险种</th>
                 <th className="px-4 py-3">被保险人(客户名称)</th>
@@ -854,25 +890,26 @@ export default function ClaimsAssistance({ selectedOrder, onSubmit }: { selected
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {mockClaimsData.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 transition-colors group cursor-pointer" onClick={() => setSelectedClaim({ ...row, status: row.status === '待处理' ? '理赔申请' : row.status })}>
+              {displayClaimsData.map((row, idx) => (
+                <tr key={idx} className="hover:bg-slate-50 transition-colors group cursor-pointer" onClick={() => setSelectedClaim(row)}>
+                  <td className="px-4 py-3 font-mono text-slate-600 text-xs">{row.assistNo || '--'}</td>
                   <td className="px-4 py-3 font-mono text-slate-600 text-xs">{row.policyNo}</td>
+                  <td className="px-4 py-3 font-mono text-slate-700 text-xs">{row.relatedCaseNo || '--'}</td>
                   <td className="px-4 py-3 font-medium text-slate-900">{row.company}</td>
                   <td className="px-4 py-3 text-slate-800">{row.type}</td>
-                  <td className="px-4 py-3 text-slate-800">
-                    <div className="flex flex-col gap-1">
-                      {row.insured.split(',').map((name, i) => (
-                        <span key={i}>{name.trim()}</span>
-                      ))}
-                    </div>
+                  <td className="px-4 py-3 text-slate-800 max-w-[220px]">
+                    <span className="block truncate" title={row.insured}>{row.insured}</span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{row.startTime}</td>
                   <td className="px-4 py-3 text-slate-600">{row.endTime}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                      row.status === '待处理' ? 'bg-amber-100/50 text-amber-800' :
-                      row.status === '处理中' ? 'bg-blue-100/50 text-blue-800' :
-                      'bg-emerald-100/50 text-emerald-800'
+                      row.status === '已暂存' ? 'bg-slate-100 text-slate-700' :
+                      row.status === '已提交' ? 'bg-blue-100 text-blue-700' :
+                      row.status === '审核中' ? 'bg-amber-100 text-amber-700' :
+                      row.status === '已通过' ? 'bg-emerald-100 text-emerald-700' :
+                      row.status === '已退回' ? 'bg-rose-100 text-rose-700' :
+                      'bg-slate-100 text-slate-700'
                     }`}>
                       {row.status}
                     </span>
