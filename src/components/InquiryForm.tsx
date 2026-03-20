@@ -84,18 +84,12 @@ function CheckboxField({ label, checked, onChange, disabled = false }: any) {
 }
 
 const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquiryNo, onSubmitData }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [countdown, setCountdown] = useState(5);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [formData, setFormData] = useState<any>({
-    companyName: customerName || '',
+  const getEmptyFormData = (companyName: string) => ({
+    companyName: companyName || '',
     employeeCount: '0',
     ownVehicleCount: '0',
     lastYearRevenue: '0',
     expectedRevenue: '0',
-
     singleLimit: '0',
     startDate: getTodayStr(),
     expandCold: false,
@@ -108,7 +102,6 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
     tibetRevenue: '0',
     expandSpecialVehicle: false,
     otherNeeds: '',
-
     shippers: [
       { name: '货主（工厂/贸易公司等物权单位）', checked: false, ratio: '0' },
       { name: '物流公司', checked: false, ratio: '0' },
@@ -121,7 +114,6 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
       { name: '自有车辆（无承托人）', checked: false, ratio: '0' },
     ],
     boxTruckRatio: '0',
-
     fragile: false,
     fragileRevenue: '0',
     autoParts: false,
@@ -136,7 +128,6 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
     electronicsRevenue: '0',
     semiconductor: false,
     semiconductorRevenue: '0',
-
     yunGui: false,
     yunGuiRevenue: '0',
     ganNing: false,
@@ -149,24 +140,42 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
     hainanRevenue: '0',
     chuanYu: false,
     chuanYuRevenue: '0',
-
     claims: [
       { year: '2023', policyNo: '', insurer: '', count: '0', amount: '0' },
       { year: '2024', policyNo: '', insurer: '', count: '0', amount: '0' },
       { year: '2025', policyNo: '', insurer: '', count: '0', amount: '0' },
     ],
-
     useTMS: false,
     useADAS: false,
     declarationConfirmed: false,
   });
 
+  const [currentStep, setCurrentStep] = useState(0);
+  const [countdown, setCountdown] = useState(5);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState<any>(getEmptyFormData(customerName || ''));
+
+  // 监听询价单编号变化，从 localStorage 加载对应数据或初始化新表单
   useEffect(() => {
-    if (currentStep === 0 && countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
+    if (inquiryNo) {
+      const storageKey = `inquiry_${inquiryNo}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          setFormData(JSON.parse(saved));
+        } catch (e) {
+          console.error(`Failed to parse inquiry data for ${inquiryNo}:`, e);
+          setFormData(getEmptyFormData(customerName || ''));
+        }
+      } else {
+        setFormData(getEmptyFormData(customerName || ''));
+      }
+    } else {
+      setFormData(getEmptyFormData(customerName || ''));
     }
-  }, [countdown, currentStep]);
+  }, [inquiryNo, customerName]);
 
   const renderDeclaration = () => (
     <div className="mt-6 p-5 bg-blue-50 rounded-2xl border border-blue-100">
