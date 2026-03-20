@@ -6,8 +6,29 @@
     <title>Suez</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root">
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f8fafc;color:#0f172a;">
+        <div style="max-width:720px;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;line-height:1.6;box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+          <h1 style="margin:0 0 8px;font-size:20px;">页面加载中...</h1>
+          <p style="margin:0;color:#334155;">如果长时间停留在此页面，请检查 GitHub Pages 是否使用 GitHub Actions 部署。</p>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.__SUEZ_BOOT_ERROR__ = function () {
+        var root = document.getElementById('root');
+        if (!root) return;
+        root.innerHTML = '' +
+          '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f8fafc;color:#0f172a;">' +
+            '<div style="max-width:760px;background:#ffffff;border:1px solid #fecaca;border-radius:16px;padding:20px;line-height:1.7;box-shadow:0 10px 30px rgba(15,23,42,0.08);">' +
+              '<h1 style="margin:0 0 8px;color:#b91c1c;font-size:20px;">应用资源加载失败</h1>' +
+              '<p style="margin:0 0 10px;color:#7f1d1d;">当前页面正在请求 /src/main.tsx，通常表示 GitHub Pages 发布源配置为分支而非 Actions 产物。</p>' +
+              '<p style="margin:0;color:#334155;">修复方法：仓库 Settings -> Pages -> Build and deployment -> Source 选择 GitHub Actions，然后重新触发工作流。</p>' +
+            '</div>' +
+          '</div>';
+      };
+    </script>
+    <script type="module" src="/src/main.tsx" onerror="window.__SUEZ_BOOT_ERROR__()"></script>
   </body>
 </html>
 
