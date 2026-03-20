@@ -159,20 +159,26 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
 
   // 监听询价单编号变化，从 localStorage 加载对应数据或初始化新表单
   useEffect(() => {
+    console.log('[InquiryForm] Loading inquiryNo:', inquiryNo, 'customerName:', customerName);
     if (inquiryNo) {
       const storageKey = `inquiry_${inquiryNo}`;
       const saved = localStorage.getItem(storageKey);
+      console.log(`[InquiryForm] Checking localStorage key: ${storageKey}, found:`, !!saved);
       if (saved) {
         try {
-          setFormData(JSON.parse(saved));
+          const parsedData = JSON.parse(saved);
+          console.log('[InquiryForm] Loaded from localStorage:', parsedData.companyName);
+          setFormData(parsedData);
         } catch (e) {
           console.error(`Failed to parse inquiry data for ${inquiryNo}:`, e);
           setFormData(getEmptyFormData(customerName || ''));
         }
       } else {
+        console.log(`[InquiryForm] No data found for ${inquiryNo}, initializing empty form`);
         setFormData(getEmptyFormData(customerName || ''));
       }
     } else {
+      console.log('[InquiryForm] No inquiryNo provided, initializing empty form');
       setFormData(getEmptyFormData(customerName || ''));
     }
   }, [inquiryNo, customerName]);
@@ -589,6 +595,12 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
         </button>
         <h2 className="text-lg font-bold text-slate-900">物流责任险询价单 {getStepProgress()}</h2>
         <div className="w-10"></div>
+      </div>
+
+      {/* 调试信息框 */}
+      <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-700">
+        <div>📋 询价单号: <strong>{inquiryNo || '(未设置)'}</strong> | 客户: <strong>{customerName || '(默认)'}</strong></div>
+        <div>💾 localStorage: <strong>{inquiryNo ? (localStorage.getItem(`inquiry_${inquiryNo}`) ? '有数据' : '无数据') : '无inquiryNo'}</strong></div>
       </div>
 
       <div id="inquiry-form-print" className="flex-1 overflow-y-auto px-5 pb-32">
