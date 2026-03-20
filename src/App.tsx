@@ -533,11 +533,7 @@ export default function App() {
     setIsAddOpportunityModalOpen(true);
   };
 
-  const generateInquiryOrderNo = () => {
-    const newNo = `ORD-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`;
-    console.log('[generateInquiryOrderNo] Generated:', newNo, 'existing orders count:', orders.length, 'order IDs:', orders.map(o => o.id));
-    return newNo;
-  };
+  const generateInquiryOrderNo = () => `ORD-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`;
 
   const generateCustomerCode = () => {
     const date = new Date();
@@ -669,8 +665,6 @@ export default function App() {
       return;
     }
 
-    console.log('[handleInquirySendConfirm] Sending order:', selectedOrderForDetail.id, 'customer:', selectedOrderForDetail.customer);
-
     const requiredFields = [
       selectedOrderForDetail.customer,
       selectedOrderForDetail.province,
@@ -697,7 +691,6 @@ export default function App() {
 
     // 在后端创建 inquiry 记录
     const userId = localStorage.getItem('suez_user_id') || 'USER-001';
-    console.log('[handleInquirySendConfirm] Creating inquiry in backend with userId:', userId);
     fetch('/api/inquiries/save', {
       method: 'POST',
       headers: {
@@ -766,12 +759,6 @@ export default function App() {
         inquiryUrl.searchParams.set('page', 'inquiry');
         inquiryUrl.searchParams.set('customerName', sentOrder.customer);
         inquiryUrl.searchParams.set('inquiryNo', sentOrder.id);
-        console.log('[handleInquirySendConfirm] Opening inquiry window with URL params:', {
-          page: 'inquiry',
-          customerName: sentOrder.customer,
-          inquiryNo: sentOrder.id,
-          fullUrl: inquiryUrl.toString(),
-        });
         window.open(inquiryUrl.toString(), '_blank');
       }
     }, 1000);

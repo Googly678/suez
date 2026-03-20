@@ -157,52 +157,49 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
 
   const [formData, setFormData] = useState<any>(getEmptyFormData(customerName || ''));
 
+  // 倒计时 useEffect（驱动声明页 5 秒等待）
+  useEffect(() => {
+    if (currentStep === 0 && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown, currentStep]);
+
   // 监听询价单编号变化，从后端或 localStorage 加载对应数据或初始化新表单
   useEffect(() => {
-    console.log('[InquiryForm] Loading inquiryNo:', inquiryNo, 'customerName:', customerName);
     if (inquiryNo) {
       // 先尝试从后端 API 获取
       fetch(`/api/inquiries/${inquiryNo}`, {
         headers: {
-          'X-User-Id': localStorage.getItem('userId') || 'USER-001',
+          'X-User-Id': localStorage.getItem('suez_user_id') || 'USER-001',
         },
       })
         .then(async (res) => {
           if (res.ok) {
             const { data } = await res.json();
-            console.log('[InquiryForm] Loaded from backend:', data.customer_name);
             setFormData(data.formData || getEmptyFormData(customerName || ''));
             return;
           }
           // 后端没有数据，尝试从 localStorage
-          console.log('[InquiryForm] Not found in backend, trying localStorage');
           const storageKey = `inquiry_${inquiryNo}`;
           const saved = localStorage.getItem(storageKey);
-          console.log(`[InquiryForm] Checking localStorage key: ${storageKey}, found:`, !!saved);
           if (saved) {
             try {
-              const parsedData = JSON.parse(saved);
-              console.log('[InquiryForm] Loaded from localStorage:', parsedData.companyName);
-              setFormData(parsedData);
+              setFormData(JSON.parse(saved));
             } catch (e) {
-              console.error(`Failed to parse inquiry data for ${inquiryNo}:`, e);
               setFormData(getEmptyFormData(customerName || ''));
             }
           } else {
-            console.log(`[InquiryForm] No data found for ${inquiryNo}, initializing empty form`);
             setFormData(getEmptyFormData(customerName || ''));
           }
         })
-        .catch((error) => {
-          console.error('[InquiryForm] Error loading from backend:', error);
+        .catch(() => {
           // 后端请求失败，从 localStorage 加载
           const storageKey = `inquiry_${inquiryNo}`;
           const saved = localStorage.getItem(storageKey);
           if (saved) {
             try {
-              const parsedData = JSON.parse(saved);
-              console.log('[InquiryForm] Fallback loaded from localStorage:', parsedData.companyName);
-              setFormData(parsedData);
+              setFormData(JSON.parse(saved));
             } catch (e) {
               setFormData(getEmptyFormData(customerName || ''));
             }
@@ -211,7 +208,6 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
           }
         });
     } else {
-      console.log('[InquiryForm] No inquiryNo provided, initializing empty form');
       setFormData(getEmptyFormData(customerName || ''));
     }
   }, [inquiryNo, customerName]);
@@ -588,7 +584,6 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
     try {
       // 先保存到后端数据库
       const userId = localStorage.getItem('suez_user_id') || 'USER-001';
-      console.log('[InquiryForm] Saving to backend with userId:', userId);
       const saveResponse = await fetch(`/api/inquiries/save`, {
         method: 'POST',
         headers: {
@@ -667,12 +662,6 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
         </button>
         <h2 className="text-lg font-bold text-slate-900">物流责任险询价单 {getStepProgress()}</h2>
         <div className="w-10"></div>
-      </div>
-
-      {/* 调试信息框 */}
-      <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-700">
-        <div>📋 询价单号: <strong>{inquiryNo || '(未设置)'}</strong> | 客户: <strong>{customerName || '(默认)'}</strong></div>
-        <div>💾 localStorage: <strong>{inquiryNo ? (localStorage.getItem(`inquiry_${inquiryNo}`) ? '有数据' : '无数据') : '无inquiryNo'}</strong></div>
       </div>
 
       <div id="inquiry-form-print" className="flex-1 overflow-y-auto px-5 pb-32">
