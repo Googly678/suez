@@ -157,26 +157,59 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
 
   const [formData, setFormData] = useState<any>(getEmptyFormData(customerName || ''));
 
-  // 监听询价单编号变化，从 localStorage 加载对应数据或初始化新表单
+  // 监听询价单编号变化，从后端或 localStorage 加载对应数据或初始化新表单
   useEffect(() => {
     console.log('[InquiryForm] Loading inquiryNo:', inquiryNo, 'customerName:', customerName);
     if (inquiryNo) {
-      const storageKey = `inquiry_${inquiryNo}`;
-      const saved = localStorage.getItem(storageKey);
-      console.log(`[InquiryForm] Checking localStorage key: ${storageKey}, found:`, !!saved);
-      if (saved) {
-        try {
-          const parsedData = JSON.parse(saved);
-          console.log('[InquiryForm] Loaded from localStorage:', parsedData.companyName);
-          setFormData(parsedData);
-        } catch (e) {
-          console.error(`Failed to parse inquiry data for ${inquiryNo}:`, e);
-          setFormData(getEmptyFormData(customerName || ''));
-        }
-      } else {
-        console.log(`[InquiryForm] No data found for ${inquiryNo}, initializing empty form`);
-        setFormData(getEmptyFormData(customerName || ''));
-      }
+      // 先尝试从后端 API 获取
+      fetch(`/api/inquiries/${inquiryNo}`, {
+        headers: {
+          'X-User-Id': localStorage.getItem('userId') || 'USER-001',
+        },
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const { data } = await res.json();
+            console.log('[InquiryForm] Loaded from backend:', data.customer_name);
+            setFormData(data.formData || getEmptyFormData(customerName || ''));
+            return;
+          }
+          // 后端没有数据，尝试从 localStorage
+          console.log('[InquiryForm] Not found in backend, trying localStorage');
+          const storageKey = `inquiry_${inquiryNo}`;
+          const saved = localStorage.getItem(storageKey);
+          console.log(`[InquiryForm] Checking localStorage key: ${storageKey}, found:`, !!saved);
+          if (saved) {
+            try {
+              const parsedData = JSON.parse(saved);
+              console.log('[InquiryForm] Loaded from localStorage:', parsedData.companyName);
+              setFormData(parsedData);
+            } catch (e) {
+              console.error(`Failed to parse inquiry data for ${inquiryNo}:`, e);
+              setFormData(getEmptyFormData(customerName || ''));
+            }
+          } else {
+            console.log(`[InquiryForm] No data found for ${inquiryNo}, initializing empty form`);
+            setFormData(getEmptyFormData(customerName || ''));
+          }
+        })
+        .catch((error) => {
+          console.error('[InquiryForm] Error loading from backend:', error);
+          // 后端请求失败，从 localStorage 加载
+          const storageKey = `inquiry_${inquiryNo}`;
+          const saved = localStorage.getItem(storageKey);
+          if (saved) {
+            try {
+              const parsedData = JSON.parse(saved);
+              console.log('[InquiryForm] Fallback loaded from localStorage:', parsedData.companyName);
+              setFormData(parsedData);
+            } catch (e) {
+              setFormData(getEmptyFormData(customerName || ''));
+            }
+          } else {
+            setFormData(getEmptyFormData(customerName || ''));
+          }
+        });
     } else {
       console.log('[InquiryForm] No inquiryNo provided, initializing empty form');
       setFormData(getEmptyFormData(customerName || ''));
@@ -553,6 +586,43 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
     }
 
     try {
+      // 先保存到后端数据库
+      const saveResponse = await fetch(`/api/inquiries/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': localStorage.getItem('userId') || 'USER-001',
+        },
+        body: JSON.stringify({
+          inquiryNo: inquiryNo,
+          customerName: customerName,
+          formData: formData,
+        }),
+      });
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json();
+        console.error('Failed to save inquiry:', errorData);
+        alert('保存询价单失败: ' + (errorData.error || '未知错误'));
+        return;
+      }
+
+      console.log('[InquiryForm] Inquiry saved successfully:', inquiryNo);
+
+      // 然后标记为已提交
+      const submitResponse = await fetch(`/api/inquiries/${inquiryNo}/submit`, {
+        method: 'POST', 
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': localStorage.getItem('userId') || 'USER-001',
+        },
+      });
+
+      if (!submitResponse.ok) {
+        const errorData = await submitResponse.json();
+        console.error('Failed to submit inquiry:', errorData);
+      }
+
       if (onSubmitData) {
         onSubmitData({
           inquiryNo: inquiryNo,

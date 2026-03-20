@@ -139,6 +139,19 @@ CREATE TABLE IF NOT EXISTS status_logs (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS inquiries (
+  inquiry_no TEXT PRIMARY KEY,
+  customer_name TEXT NOT NULL,
+  customer_code TEXT,
+  org_id TEXT,
+  status TEXT NOT NULL DEFAULT 'draft',
+  form_data_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  submitted_at TEXT,
+  FOREIGN KEY (org_id) REFERENCES organizations(org_id)
+);
+
 CREATE TABLE IF NOT EXISTS organizations (
   org_id TEXT PRIMARY KEY,
   org_code TEXT NOT NULL UNIQUE,
@@ -1142,6 +1155,118 @@ app.post('/api/appraisal-cases/:caseNo/review', (req, res) => {
       case: getCaseByNo.get(caseNo),
       assist: (current.assist_no ? getAssistByNo.get(current.assist_no) : getAssistByCaseNo.get(caseNo)) || null,
     },
+  });
+});
+
+// ========== Inquiries APIs ==========
+app.get('/api/inquiries', (req, res) => {
+  const currentUser = ensurePermission(req, res, 'sales.inquiry.view');
+  if (!currentUser) return;
+
+  const scopedOrgIds = getScopedOrgIds(currentUser.orgId);
+  if (scopedOrgIds.length === 0) {
+    res.json({ data: [] });
+    return;
+  }
+
+  const inClause = scopedOrgIds.map(() => '?').join(',');
+  const rows = db
+    .prepare(`SELECT * FROM inquiries WHERE org_id IN (${inClause}) ORDER BY updated_at DESC`)
+    .all(...scopedOrgIds) as any[];
+
+  res.json({
+    data: rows.map((row) => ({
+      ...row,
+      formData: row.form_data_json ? JSON.parse(row.form_data_json) : null,
+    })),
+  });
+});
+
+app.get('/api/inquiries/:inquiryNo', (req, res) => {
+  const currentUser = ensurePermission(req, res, 'sales.inquiry.view');
+  if (!currentUser) return;
+
+  const inquiry = db.prepare('SELECT * FROM inquiries WHERE inquiry_no = ?').get(req.params.inquiryNo) as any;
+
+  if (!inquiry || !ensureDataScope(currentUser, inquiry.org_id)) {
+    res.status(404).json({ error: '询价单不存在或无权访问' });
+    return;
+  }
+
+  res.json({
+    data: {
+      ...inquiry,
+      formData: inquiry.form_data_json ? JSON.parse(inquiry.form_data_json) : null,
+    },
+  });
+});
+
+app.post('/api/inquiries/save', (req, res) => {
+  const currentUser = ensurePermission(req, res, 'sales.inquiry.manage');
+  if (!currentUser) return;
+
+  const body = req.body || {};
+  const inquiryNo = body.inquiryNo || `INQ-${Date.now()}`;
+  const existing = db.prepare('SELECT * FROM inquiries WHERE inquiry_no = ?').get(inquiryNo) as any;
+
+  if (existing && !ensureDataScope(currentUser, existing.org_id)) {
+    res.status(403).json({ error: '无权修改该询价单' });
+    return;
+  }
+
+  const payload = {
+    inquiry_no: inquiryNo,
+    customer_name: body.customerName || '',
+    customer_code: body.customerCode || '',
+    org_id: existing?.org_id || currentUser.orgId,
+    status: existing?.status || 'draft',
+    form_data_json: JSON.stringify(body.formData || {}),
+    created_at: existing?.created_at || nowStr(),
+    updated_at: nowStr(),
+    submitted_at: existing?.submitted_at || null,
+  };
+
+  db.prepare(
+    `INSERT OR REPLACE INTO inquiries 
+    (inquiry_no, customer_name, customer_code, org_id, status, form_data_json, created_at, updated_at, submitted_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    payload.inquiry_no,
+    payload.customer_name,
+    payload.customer_code,
+    payload.org_id,
+    payload.status,
+    payload.form_data_json,
+    payload.created_at,
+    payload.updated_at,
+    payload.submitted_at
+  );
+
+  res.json({
+    data: {
+      ...payload,
+      formData: body.formData || {},
+    },
+  });
+});
+
+app.post('/api/inquiries/:inquiryNo/submit', (req, res) => {
+  const currentUser = ensurePermission(req, res, 'sales.inquiry.manage');
+  if (!currentUser) return;
+
+  const inquiry = db.prepare('SELECT * FROM inquiries WHERE inquiry_no = ?').get(req.params.inquiryNo) as any;
+
+  if (!inquiry || !ensureDataScope(currentUser, inquiry.org_id)) {
+    res.status(404).json({ error: '询价单不存在或无权访问' });
+    return;
+  }
+
+  db.prepare(
+    `UPDATE inquiries SET status = ?, submitted_at = ?, updated_at = ? WHERE inquiry_no = ?`
+  ).run('submitted', nowStr(), nowStr(), req.params.inquiryNo);
+
+  res.json({
+    data: db.prepare('SELECT * FROM inquiries WHERE inquiry_no = ?').get(req.params.inquiryNo),
   });
 });
 
