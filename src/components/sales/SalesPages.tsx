@@ -37,6 +37,7 @@ interface CustomerManagementViewProps {
   riskColors: string[];
   onSelectCustomer: (customer: any) => void;
   onOpenAddCustomer: () => void;
+  canManage?: boolean;
 }
 
 export function CustomerManagementView({
@@ -51,6 +52,7 @@ export function CustomerManagementView({
   riskColors,
   onSelectCustomer,
   onOpenAddCustomer,
+  canManage = false,
 }: CustomerManagementViewProps) {
   const [draftCustomerFilter, setDraftCustomerFilter] = React.useState(customerFilter);
 
@@ -246,6 +248,7 @@ export function CustomerManagementView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 mb-6">
         <button
           onClick={onOpenAddCustomer}
+          disabled={!canManage}
           className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
@@ -426,6 +429,7 @@ interface OpportunityManagementViewProps {
   setOpportunityFilter: React.Dispatch<React.SetStateAction<any>>;
   filteredOpportunities: any[];
   onOpenAddOpportunity: () => void;
+  canManage?: boolean;
 }
 
 export function OpportunityManagementView({
@@ -433,6 +437,7 @@ export function OpportunityManagementView({
   setOpportunityFilter,
   filteredOpportunities,
   onOpenAddOpportunity,
+  canManage = false,
 }: OpportunityManagementViewProps) {
   const [draftOpportunityFilter, setDraftOpportunityFilter] = React.useState(opportunityFilter);
 
@@ -459,6 +464,7 @@ export function OpportunityManagementView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 mb-6">
         <button
           onClick={onOpenAddOpportunity}
+          disabled={!canManage}
           className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
@@ -645,6 +651,8 @@ interface OrderManagementViewProps {
   onShowInquiryConfirm: () => void;
   onClaimOrder: (order: any) => void;
   submittedInquiries?: Record<string, any>;
+  canManage?: boolean;
+  canCreateClaim?: boolean;
 }
 
 export function OrderManagementView({
@@ -662,6 +670,8 @@ export function OrderManagementView({
   onShowInquiryConfirm,
   onClaimOrder,
   submittedInquiries = {},
+  canManage = false,
+  canCreateClaim = false,
 }: OrderManagementViewProps) {
   const isNewOrder = Boolean(selectedOrderForDetail?.isNew);
   const [draftOrderFilter, setDraftOrderFilter] = React.useState(orderFilter);
@@ -743,6 +753,7 @@ export function OrderManagementView({
         <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 mb-6">
           <button
             onClick={onOpenAddOrder}
+            disabled={!canManage}
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all active:scale-[0.98]"
           >
             <Plus className="w-4 h-4" />
@@ -1121,6 +1132,7 @@ export function OrderManagementView({
             <button
               type="button"
               onClick={() => onSaveOrderDraft(selectedOrderForDetail)}
+              disabled={!canManage}
               className="flex items-center gap-2 px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
             >
               <Save className="w-4 h-4" />
@@ -1133,7 +1145,7 @@ export function OrderManagementView({
                 }
                 onShowInquiryConfirm();
               }}
-              disabled={!requiredFieldsComplete}
+              disabled={!requiredFieldsComplete || !canManage}
               className="flex items-center gap-2 px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
@@ -1141,6 +1153,7 @@ export function OrderManagementView({
             </button>
             </div>
           </div>
+                                disabled={!canCreateClaim}
         </div>
       ) : (
         <>

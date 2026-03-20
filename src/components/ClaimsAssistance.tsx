@@ -9,12 +9,16 @@ export default function ClaimsAssistance({
   appraisalCases,
   onDraftSave,
   onSubmit,
+  canManage,
+  canSubmit,
 }: {
   selectedOrder?: any;
   claimAssistPool?: any[];
   appraisalCases?: any[];
   onDraftSave: (claim: any) => void;
   onSubmit: (claim: any) => void;
+  canManage: boolean;
+  canSubmit: boolean;
 }) {
   const [selectedClaim, setSelectedClaim] = useState<any>(null);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -130,7 +134,7 @@ export default function ClaimsAssistance({
     setLogisticsCompanies((prev) => prev.map((item) => (item.id === id ? { ...item, name: value } : item)));
   };
 
-  const isLocked = ['已提交', '审核中', '已通过'].includes(selectedClaim?.status || '');
+  const isLocked = ['已提交', '审核中', '已通过'].includes(selectedClaim?.status || '') || !canManage;
 
   const handleSubmitConfirm = () => {
     setShowSubmitConfirm(false);
@@ -790,7 +794,7 @@ export default function ClaimsAssistance({
             onClick={() => {
               setShowSubmitConfirm(true);
             }}
-            disabled={isLocked}
+            disabled={isLocked || !canSubmit}
             className="px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
           >
             提交

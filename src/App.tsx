@@ -3,21 +3,28 @@ import {
   LayoutDashboard,
   TrendingUp,
   FileText,
+  Building2,
   Search,
   Bell,
   Menu,
   ChevronDown,
+  Settings,
   Wrench,
   ShieldCheck,
   ClipboardList,
   HeartHandshake,
   Target,
+  UserCog,
+  LogOut,
 } from 'lucide-react';
 import ClaimsAssistance from './components/ClaimsAssistance';
 import AppraisalClaims from './components/AppraisalClaims';
 import AttachmentManager from './components/AttachmentManager';
 import InquiryAttachmentManager from './components/InquiryAttachmentManager';
 import InquiryForm from './components/InquiryForm';
+import LoginScreen from './components/auth/LoginScreen';
+import OrganizationManagement from './components/system/OrganizationManagement';
+import AccessControlManagement from './components/system/AccessControlManagement';
 import { locationData } from './constants/locations';
 import {
   CustomerManagementView,
@@ -34,26 +41,41 @@ const sidebarGroups = [
   {
     title: '保单管理',
     icon: FileText,
-    items: [{ name: '我的保单', icon: FileText }],
+    items: [{ name: '我的保单', icon: FileText, permissions: ['policies.view'] }],
   },
   {
     title: '销售管理',
     icon: TrendingUp,
     items: [
-      { name: '询价单管理', icon: ClipboardList },
-      { name: '客户管理', icon: HeartHandshake },
-      { name: '商机池管理', icon: Target },
+      { name: '询价单管理', icon: ClipboardList, permissions: ['sales.inquiry.view'] },
+      { name: '客户管理', icon: HeartHandshake, permissions: ['sales.customer.view'] },
+      { name: '商机池管理', icon: Target, permissions: ['sales.opportunity.view'] },
     ],
   },
   {
     title: '理赔工作台',
     icon: LayoutDashboard,
     items: [
-      { name: '理赔协助', icon: ShieldCheck },
-      { name: '公估理赔', icon: ShieldCheck },
-      { name: '保司审核', icon: ShieldCheck },
+      { name: '理赔协助', icon: ShieldCheck, permissions: ['claims.assist.view'] },
+      { name: '公估理赔', icon: ShieldCheck, permissions: ['claims.appraisal.view'] },
+      { name: '保司审核', icon: ShieldCheck, permissions: ['claims.insurer.view'] },
     ],
   },
+  {
+    title: '系统管理',
+    icon: Settings,
+    items: [
+      { name: '机构管理', icon: Building2, permissions: ['system.org.view', 'system.org.manage'] },
+      { name: '权限管理', icon: UserCog, permissions: ['system.role.view', 'system.role.manage', 'system.user.view', 'system.user.manage'] },
+    ],
+  },
+];
+
+const demoAccounts = [
+  { username: 'admin', password: '123456', roleName: '系统管理员', realName: '系统管理员' },
+  { username: 'sales.sz', password: '123456', roleName: '销售经理', realName: '深圳销售经理' },
+  { username: 'appraisal', password: '123456', roleName: '公估审核员', realName: '公估审核员' },
+  { username: 'insurer', password: '123456', roleName: '保司审核员', realName: '保司审核员' },
 ];
 
 const mockCustomerData = [
@@ -213,6 +235,14 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedGroup, setExpandedGroup] = useState('理赔工作台');
   const [resetKey, setResetKey] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
+  const [organizationList, setOrganizationList] = useState<any[]>([]);
+  const [organizationTree, setOrganizationTree] = useState<any[]>([]);
+  const [roleList, setRoleList] = useState<any[]>([]);
+  const [userList, setUserList] = useState<any[]>([]);
+  const [permissionList, setPermissionList] = useState<any[]>([]);
 
   const [customers, setCustomers] = useState(mockCustomerData);
   const [opportunities, setOpportunities] = useState(mockOpportunityData);
@@ -300,9 +330,12 @@ export default function App() {
   });
 
   const apiRequest = async (path: string, options?: RequestInit) => {
+    const currentUserId = currentUser?.userId || localStorage.getItem('suez_user_id') || '';
     const response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
         'Content-Type': 'application/json',
+        ...(currentUserId ? { 'X-User-Id': currentUserId } : {}),
+        ...(options?.headers || {}),
       },
       ...options,
     });
@@ -313,6 +346,59 @@ export default function App() {
     }
 
     return response.json();
+  };
+
+  const loadSystemBootstrap = async () => {
+    const result = await apiRequest('/system/bootstrap');
+    const data = result?.data || {};
+    setCurrentUser(data.currentUser || null);
+    setOrganizationList(data.organizations || []);
+    setOrganizationTree(data.organizationTree || []);
+    setRoleList(data.roles || []);
+    setUserList(data.users || []);
+    setPermissionList(data.permissions || []);
+  };
+
+  const hasPermission = (permission: string | string[]) => {
+    const permissions = Array.isArray(permission) ? permission : [permission];
+    const currentPermissions = currentUser?.permissions || [];
+    return permissions.some((item) => currentPermissions.includes(item));
+  };
+
+  const handleLogin = async ({ username, password }: { username: string; password: string }) => {
+    try {
+      setAuthLoading(true);
+      setAuthError('');
+      const result = await apiRequest('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      const user = result?.data?.user || null;
+      const token = result?.data?.token || '';
+      if (!user || !token) {
+        throw new Error('登录返回无效');
+      }
+      localStorage.setItem('suez_user_id', token);
+      setCurrentUser(user);
+      await loadSystemBootstrap();
+    } catch (error: any) {
+      setAuthError(error?.message || '登录失败');
+      localStorage.removeItem('suez_user_id');
+      setCurrentUser(null);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('suez_user_id');
+    setCurrentUser(null);
+    setOrganizationList([]);
+    setOrganizationTree([]);
+    setRoleList([]);
+    setUserList([]);
+    setPermissionList([]);
+    setAuthError('');
   };
 
   useEffect(() => {
@@ -328,12 +414,41 @@ export default function App() {
   }, [selectedOrderForDetail]);
 
   useEffect(() => {
-    const loadBackendClaimsData = async () => {
+    const restoreSession = async () => {
+      const savedUserId = localStorage.getItem('suez_user_id');
+      if (!savedUserId) {
+        setAuthLoading(false);
+        return;
+      }
+
       try {
+        const userResult = await apiRequest('/auth/me', {
+          headers: { 'X-User-Id': savedUserId },
+        });
+        setCurrentUser(userResult?.data || null);
+      } catch {
+        localStorage.removeItem('suez_user_id');
+        setCurrentUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    restoreSession();
+  }, []);
+
+  useEffect(() => {
+    const loadBackendClaimsData = async () => {
+      if (!currentUser) {
+        return;
+      }
+
+      try {
+        await loadSystemBootstrap();
         const [policyRes, assistRes, casesRes] = await Promise.all([
-          apiRequest('/policies'),
-          apiRequest('/claim-assists'),
-          apiRequest('/appraisal-cases'),
+          hasPermission('policies.view') ? apiRequest('/policies') : Promise.resolve({ data: [] }),
+          hasPermission('claims.assist.view') ? apiRequest('/claim-assists') : Promise.resolve({ data: [] }),
+          hasPermission(['claims.appraisal.view', 'claims.insurer.view', 'claims.assist.view']) ? apiRequest('/appraisal-cases') : Promise.resolve({ data: [] }),
         ]);
 
         const policyRows = (policyRes?.data || []).map(normalizePolicyRow);
@@ -341,20 +456,15 @@ export default function App() {
         const caseRows = (casesRes?.data || []).map(normalizeCaseRow);
 
         setPolicies(policyRows);
-        if (assistRows.length > 0) {
-          setClaimAssistPool(assistRows);
-        }
-        if (caseRows.length > 0) {
-          setClaimsPool(caseRows);
-        }
+        setClaimAssistPool(assistRows);
+        setClaimsPool(caseRows);
       } catch (error) {
         console.warn('Backend claims data not available, fallback to local state.', error);
       }
     };
 
     loadBackendClaimsData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser]);
 
   // 监听localStorage中的询价单提交数据
   useEffect(() => {
@@ -951,6 +1061,25 @@ export default function App() {
     activeItem === '保单详情'
       ? '保单管理'
       : sidebarGroups.find((group) => group.items.some((item) => item.name === activeItem))?.title || '未知模块';
+
+  const filteredSidebarGroups = sidebarGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => hasPermission(item.permissions)),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  useEffect(() => {
+    if (filteredSidebarGroups.length === 0) {
+      return;
+    }
+
+    const allVisibleItems = filteredSidebarGroups.flatMap((group) => group.items.map((item) => item.name));
+    if (!allVisibleItems.includes(activeItem)) {
+      setActiveItem(allVisibleItems[0]);
+      setExpandedGroup(filteredSidebarGroups[0].title);
+    }
+  }, [currentUser, filteredSidebarGroups, activeItem]);
   const allPoliciesSelected =
     filteredPolicies.length > 0 && filteredPolicies.every((policy) => selectedPolicyNos.includes(policy.policyNo));
 
@@ -971,6 +1100,18 @@ export default function App() {
     setPolicyFilter(emptyPolicyFilter);
   };
 
+  const refreshSystemData = async () => {
+    await loadSystemBootstrap();
+  };
+
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">系统加载中...</div>;
+  }
+
+  if (!currentUser) {
+    return <LoginScreen demoAccounts={demoAccounts} onLogin={handleLogin} loading={authLoading} error={authError} />;
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
       <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} flex-shrink-0 bg-slate-900 text-white transition-all duration-300 flex flex-col z-20 shadow-xl shadow-slate-900/20`}>
@@ -990,7 +1131,7 @@ export default function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto py-4 scrollbar-hide">
-          {sidebarGroups.map((group, idx) => {
+          {filteredSidebarGroups.map((group, idx) => {
             const isExpanded = expandedGroup === group.title;
             const hasActiveItem = group.items.some((item) => item.name === activeItem);
 
@@ -1057,11 +1198,21 @@ export default function App() {
             <img src="https://picsum.photos/seed/admin/100/100" alt="Admin" className="w-9 h-9 rounded-full border-2 border-slate-700" referrerPolicy="no-referrer" />
             {isSidebarOpen && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">系统管理员</p>
-                <p className="text-xs text-slate-400 truncate">admin@ryts.com</p>
+                <p className="text-sm font-medium text-white truncate">{currentUser.realName}</p>
+                <p className="text-xs text-slate-400 truncate">{currentUser.roleName}</p>
               </div>
             )}
           </div>
+          {isSidebarOpen && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:bg-slate-800"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              退出登录
+            </button>
+          )}
         </div>
       </aside>
 
@@ -1124,6 +1275,7 @@ export default function App() {
                 riskColors={RISK_COLORS}
                 onSelectCustomer={setSelectedCustomer}
                 onOpenAddCustomer={openAddCustomerModal}
+                canManage={hasPermission('sales.customer.manage')}
               />
             ) : activeItem === '商机池管理' ? (
               <OpportunityManagementView
@@ -1131,6 +1283,7 @@ export default function App() {
                 setOpportunityFilter={setOpportunityFilter}
                 filteredOpportunities={filteredOpportunities}
                 onOpenAddOpportunity={openAddOpportunityModal}
+                canManage={hasPermission('sales.opportunity.manage')}
               />
             ) : activeItem === '询价单管理' ? (
               <OrderManagementView
@@ -1155,6 +1308,46 @@ export default function App() {
                   setResetKey((prev) => prev + 1);
                 }}
                 submittedInquiries={submittedInquiries}
+                canManage={hasPermission('sales.inquiry.manage')}
+                canCreateClaim={hasPermission('claims.assist.manage')}
+              />
+            ) : activeItem === '机构管理' ? (
+              <OrganizationManagement
+                tree={organizationTree}
+                canManage={hasPermission('system.org.manage')}
+                onCreate={async (payload) => {
+                  await apiRequest('/system/organizations', { method: 'POST', body: JSON.stringify(payload) });
+                  await refreshSystemData();
+                }}
+                onUpdate={async (orgId, payload) => {
+                  await apiRequest(`/system/organizations/${orgId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+                  await refreshSystemData();
+                }}
+              />
+            ) : activeItem === '权限管理' ? (
+              <AccessControlManagement
+                roles={roleList}
+                users={userList}
+                permissions={permissionList}
+                organizations={organizationList}
+                canManageRoles={hasPermission('system.role.manage')}
+                canManageUsers={hasPermission('system.user.manage')}
+                onCreateRole={async (payload) => {
+                  await apiRequest('/system/roles', { method: 'POST', body: JSON.stringify(payload) });
+                  await refreshSystemData();
+                }}
+                onUpdateRole={async (roleId, payload) => {
+                  await apiRequest(`/system/roles/${roleId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+                  await refreshSystemData();
+                }}
+                onCreateUser={async (payload) => {
+                  await apiRequest('/system/users', { method: 'POST', body: JSON.stringify(payload) });
+                  await refreshSystemData();
+                }}
+                onUpdateUser={async (userId, payload) => {
+                  await apiRequest(`/system/users/${userId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+                  await refreshSystemData();
+                }}
               />
             ) : activeItem === '我的保单' ? (
               <div className="space-y-6">
@@ -1514,6 +1707,8 @@ export default function App() {
                   appraisalCases={claimsPool}
                   onDraftSave={handleClaimDraftSave}
                   onSubmit={handleClaimsSubmit}
+                  canManage={hasPermission('claims.assist.manage')}
+                  canSubmit={hasPermission('claims.assist.submit')}
                 />
               </div>
             ) : activeItem === '公估理赔' ? (
@@ -1525,6 +1720,7 @@ export default function App() {
                   initialSelectedCase={selectedAppraisalCase}
                   onInitialSelectedCaseConsumed={() => setSelectedAppraisalCase(null)}
                   reviewStage="appraisal"
+                  canReview={hasPermission('claims.appraisal.review')}
                 />
               </div>
             ) : activeItem === '保司审核' ? (
@@ -1536,6 +1732,7 @@ export default function App() {
                   initialSelectedCase={selectedAppraisalCase}
                   onInitialSelectedCaseConsumed={() => setSelectedAppraisalCase(null)}
                   reviewStage="insurer"
+                  canReview={hasPermission('claims.insurer.review')}
                 />
               </div>
             ) : (

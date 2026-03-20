@@ -8,6 +8,7 @@ export default function AppraisalClaims({
   initialSelectedCase,
   onInitialSelectedCaseConsumed,
   reviewStage = 'appraisal',
+  canReview,
 }: {
   claimsPool: any[];
   onCaseOpen: (claimCase: any, reviewStage?: 'appraisal' | 'insurer') => void;
@@ -15,6 +16,7 @@ export default function AppraisalClaims({
   initialSelectedCase?: any;
   onInitialSelectedCaseConsumed?: () => void;
   reviewStage?: 'appraisal' | 'insurer';
+  canReview: boolean;
 }) {
   const [selectedCase, setSelectedCase] = useState<any>(null);
   const [reviewComment, setReviewComment] = useState('');
@@ -64,7 +66,7 @@ export default function AppraisalClaims({
           rejectedHint: '当前案件已退回，等待理赔协助补充并再次提交后，再进入公估审核。',
           statusOptions: ['已提交', '公估中', '定损中', '已退回'],
         };
-  const isReviewEditable = selectedCase?.status === stageConfig.inProgressStatus;
+  const isReviewEditable = selectedCase?.status === stageConfig.inProgressStatus && canReview;
 
   const displayData = [...claimsPool]
     .filter((item, index, arr) => arr.findIndex((other) => other.id === item.id) === index)
@@ -769,8 +771,12 @@ export default function AppraisalClaims({
                   className="hover:bg-slate-50 transition-colors group cursor-pointer"
                   onClick={() => {
                     if (row.status === stageConfig.openableStatus) {
-                      onCaseOpen(row, reviewStage);
-                      setSelectedCase({ ...row, status: stageConfig.inProgressStatus });
+                      if (!canReview) {
+                        setSelectedCase(row);
+                      } else {
+                        onCaseOpen(row, reviewStage);
+                        setSelectedCase({ ...row, status: stageConfig.inProgressStatus });
+                      }
                     } else {
                       setSelectedCase(row);
                     }
@@ -790,7 +796,7 @@ export default function AppraisalClaims({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button className="text-blue-600 hover:text-blue-800 font-medium text-xs transition-colors p-1 rounded hover:bg-blue-50">
+                    <button className="text-blue-600 hover:text-blue-800 font-medium text-xs transition-colors p-1 rounded hover:bg-blue-50 disabled:text-slate-400 disabled:hover:bg-transparent" disabled={row.status === stageConfig.openableStatus && !canReview}>
                       {row.status === stageConfig.openableStatus ? stageConfig.openActionText : row.status === stageConfig.inProgressStatus ? stageConfig.continueActionText : '查看详情'}
                     </button>
                   </td>
