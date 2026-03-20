@@ -78,6 +78,41 @@ const demoAccounts = [
   { username: 'insurer', password: '123456', roleName: '保司审核员', realName: '保司审核员' },
 ];
 
+const demoRolePermissions: Record<string, string[]> = {
+  系统管理员: [
+    'policies.view',
+    'sales.inquiry.view',
+    'sales.inquiry.manage',
+    'sales.customer.view',
+    'sales.opportunity.view',
+    'claims.assist.view',
+    'claims.assist.manage',
+    'claims.appraisal.view',
+    'claims.appraisal.review',
+    'claims.insurer.view',
+    'claims.insurer.review',
+    'system.org.view',
+    'system.org.manage',
+    'system.role.view',
+    'system.role.manage',
+    'system.user.view',
+    'system.user.manage',
+  ],
+  销售经理: ['sales.inquiry.view', 'sales.inquiry.manage', 'sales.customer.view', 'sales.opportunity.view'],
+  公估审核员: ['claims.appraisal.view', 'claims.appraisal.review', 'claims.assist.view'],
+  保司审核员: ['claims.insurer.view', 'claims.insurer.review', 'claims.assist.view'],
+};
+
+const demoUsers = demoAccounts.map((account, index) => ({
+  userId: `DEMO-${String(index + 1).padStart(3, '0')}`,
+  username: account.username,
+  realName: account.realName,
+  roleName: account.roleName,
+  orgId: 'ORG-DEMO',
+  orgName: '演示机构',
+  permissions: demoRolePermissions[account.roleName] || [],
+}));
+
 const mockCustomerData = [
   { id: 'CUST-2026-001', customerCode: 'SF001', name: '顺丰速运', location: '广东省/深圳市/南山区', industry: '物流运输', scale: '10000人以上', contact: '张伟', phone: '13800138000', businessLine: '配送物流' },
   { id: 'CUST-2026-002', customerCode: 'DD002', name: '滴滴出行', location: '北京市/海淀区', industry: '网约车', scale: '5000-10000人', contact: '李娜', phone: '13900139000', businessLine: '商用车' },
@@ -379,11 +414,29 @@ export default function App() {
         throw new Error('登录返回无效');
       }
       localStorage.setItem('suez_user_id', token);
+      localStorage.removeItem('suez_demo_user');
       setCurrentUser(user);
       await loadSystemBootstrap();
     } catch (error: any) {
+      // GitHub Pages 无后端时启用本地演示登录，避免页面不可用。
+      const matched = demoUsers.find((item) => item.username === username);
+      const matchedAccount = demoAccounts.find((item) => item.username === username && item.password === password);
+      if (matched && matchedAccount) {
+        localStorage.setItem('suez_user_id', matched.userId);
+        localStorage.setItem('suez_demo_user', JSON.stringify(matched));
+        setCurrentUser(matched);
+        setOrganizationList([]);
+        setOrganizationTree([]);
+        setRoleList([]);
+        setUserList([]);
+        setPermissionList([]);
+        setAuthError('');
+        return;
+      }
+
       setAuthError(error?.message || '登录失败');
       localStorage.removeItem('suez_user_id');
+      localStorage.removeItem('suez_demo_user');
       setCurrentUser(null);
     } finally {
       setAuthLoading(false);
@@ -392,6 +445,7 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('suez_user_id');
+    localStorage.removeItem('suez_demo_user');
     setCurrentUser(null);
     setOrganizationList([]);
     setOrganizationTree([]);
@@ -427,7 +481,17 @@ export default function App() {
         });
         setCurrentUser(userResult?.data || null);
       } catch {
+        const localDemoUserText = localStorage.getItem('suez_demo_user');
+        if (localDemoUserText) {
+          try {
+            setCurrentUser(JSON.parse(localDemoUserText));
+            return;
+          } catch {
+            // ignore parse error and clear broken cache below
+          }
+        }
         localStorage.removeItem('suez_user_id');
+        localStorage.removeItem('suez_demo_user');
         setCurrentUser(null);
       } finally {
         setAuthLoading(false);
