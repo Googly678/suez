@@ -604,8 +604,6 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
         return;
       }
 
-      console.log('[InquiryForm] Inquiry saved successfully:', inquiryNo);
-
       // 然后标记为已提交
       const submitResponse = await fetch(`/api/inquiries/${inquiryNo}/submit`, {
         method: 'POST', 

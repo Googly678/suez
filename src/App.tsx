@@ -115,7 +115,7 @@ const riskData = [
 ];
 
 const RISK_COLORS = ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981'];
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:3002/api';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/api';
 
 const parseMoney = (value: string) => Number(value.replace(/[¥,]/g, '')) || 0;
 
@@ -221,7 +221,7 @@ export default function App() {
     const handleInquirySubmit = (data: any) => {
       // 将数据存储到localStorage，以便主窗口可以读取
       localStorage.setItem(`inquiry_${data.inquiryNo}`, JSON.stringify(data));
-      console.log('Inquiry submitted:', data);
+      // inquiry submitted
     };
     return <InquiryForm 
       customerName={queryCustomerName} 
