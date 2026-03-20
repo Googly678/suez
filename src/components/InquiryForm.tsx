@@ -169,6 +169,7 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
   useEffect(() => {
     if (inquiryNo) {
       // 先尝试从后端 API 获取
+      const emptyData = getEmptyFormData(customerName || '');
       fetch(`/api/inquiries/${inquiryNo}`, {
         headers: {
           'X-User-Id': localStorage.getItem('suez_user_id') || 'USER-001',
@@ -177,7 +178,8 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
         .then(async (res) => {
           if (res.ok) {
             const { data } = await res.json();
-            setFormData(data.formData || getEmptyFormData(customerName || ''));
+            // 合并默认值，确保 claims/shippers/carriers 等数组字段不为 undefined
+            setFormData({ ...emptyData, ...(data.formData || {}) });
             return;
           }
           // 后端没有数据，尝试从 localStorage
@@ -185,12 +187,12 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
           const saved = localStorage.getItem(storageKey);
           if (saved) {
             try {
-              setFormData(JSON.parse(saved));
+              setFormData({ ...emptyData, ...JSON.parse(saved) });
             } catch (e) {
-              setFormData(getEmptyFormData(customerName || ''));
+              setFormData(emptyData);
             }
           } else {
-            setFormData(getEmptyFormData(customerName || ''));
+            setFormData(emptyData);
           }
         })
         .catch(() => {
@@ -199,12 +201,12 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
           const saved = localStorage.getItem(storageKey);
           if (saved) {
             try {
-              setFormData(JSON.parse(saved));
+              setFormData({ ...emptyData, ...JSON.parse(saved) });
             } catch (e) {
-              setFormData(getEmptyFormData(customerName || ''));
+              setFormData(emptyData);
             }
           } else {
-            setFormData(getEmptyFormData(customerName || ''));
+            setFormData(emptyData);
           }
         });
     } else {
@@ -598,10 +600,9 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
       });
 
       if (!saveResponse.ok) {
-        const errorData = await saveResponse.json();
-        console.error('Failed to save inquiry:', errorData);
-        alert('保存询价单失败: ' + (errorData.error || '未知错误'));
-        return;
+        // 保存失败不阻断流程，数据已于询价单发送时入库，此处仅更新回填内容
+        const errorData = await saveResponse.json().catch(() => ({}));
+        console.error('Failed to save inquiry formData:', errorData);
       }
 
       // 然后标记为已提交
