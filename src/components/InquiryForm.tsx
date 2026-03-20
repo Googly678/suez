@@ -587,11 +587,13 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
 
     try {
       // 先保存到后端数据库
+      const userId = localStorage.getItem('suez_user_id') || 'USER-001';
+      console.log('[InquiryForm] Saving to backend with userId:', userId);
       const saveResponse = await fetch(`/api/inquiries/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': localStorage.getItem('userId') || 'USER-001',
+          'X-User-Id': userId,
         },
         body: JSON.stringify({
           inquiryNo: inquiryNo,
@@ -614,7 +616,7 @@ const InquiryForm: React.FC<InquiryFormProps> = ({ onClose, customerName, inquir
         method: 'POST', 
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': localStorage.getItem('userId') || 'USER-001',
+          'X-User-Id': userId,
         },
       });
 

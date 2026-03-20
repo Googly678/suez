@@ -696,7 +696,8 @@ export default function App() {
     };
 
     // 在后端创建 inquiry 记录
-    const userId = localStorage.getItem('userId') || 'USER-001';
+    const userId = localStorage.getItem('suez_user_id') || 'USER-001';
+    console.log('[handleInquirySendConfirm] Creating inquiry in backend with userId:', userId);
     fetch('/api/inquiries/save', {
       method: 'POST',
       headers: {
