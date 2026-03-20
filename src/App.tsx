@@ -1075,6 +1075,8 @@ export default function App() {
     }
 
     const allVisibleItems = filteredSidebarGroups.flatMap((group) => group.items.map((item) => item.name));
+    // '保单详情' 是虚拟路由（点击保单号进入），不在侧边栏列表中，不应被强制重置
+    if (activeItem === '保单详情') return;
     if (!allVisibleItems.includes(activeItem)) {
       setActiveItem(allVisibleItems[0]);
       setExpandedGroup(filteredSidebarGroups[0].title);

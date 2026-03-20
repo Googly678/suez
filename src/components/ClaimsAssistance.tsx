@@ -3,6 +3,55 @@ import { ChevronLeft, ChevronDown, Search, MoreHorizontal, Plus, Upload, AlertCi
 
 import { locationData } from '../constants/locations';
 
+const ACCIDENT_CAUSE_MAP: Record<string, string[]> = {
+  交通事故: [
+    '单车事故碰撞',
+    '单车事故翻覆',
+    '单车事故仅货损',
+    '两车或多车事故',
+    '其他',
+  ],
+  火灾事故: [
+    '货物自燃',
+    '外来原因',
+    '车辆油脂起火',
+    '交通事故引起',
+    '仓库火灾',
+    '其他',
+  ],
+  水湿: [
+    '运输中未盖雨布雨淋',
+    '运输中已盖雨布雨淋',
+    '稀车运输中雨淋',
+    '非运输途中雨淋',
+    '非雨林水浸',
+    '其他',
+  ],
+  碰损: [
+    '运输中货物摔落',
+    '运输中货物相互或与车厢碰撞',
+    '非运输中碰损',
+    '其他',
+  ],
+  装卸事故: [
+    '叉车装卸事故',
+    '人工搬运事故',
+    '吊装设备装卸事故',
+    '其他',
+  ],
+  丢失: [
+    '运输途中丢失（包括停车服务区或加油站）',
+    '中转站丢失',
+    '收货人处丢失',
+    '其他',
+  ],
+  其他: [
+    '运输车辆失联',
+    '哄抢',
+    '其他',
+  ],
+};
+
 export default function ClaimsAssistance({
   selectedOrder,
   claimAssistPool,
@@ -415,17 +464,27 @@ export default function ClaimsAssistance({
                   <div className="space-y-1.5 lg:col-span-3">
                     <label className="text-sm font-medium text-slate-700">事故原因</label>
                     <div className="flex gap-2">
-                      <select className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                        <option value="">一级目录</option>
-                        <option value="交通事故">交通事故</option>
-                        <option value="自然灾害">自然灾害</option>
-                        <option value="意外事故">意外事故</option>
+                      <select
+                        value={accidentInfo.reason1}
+                        disabled={isLocked}
+                        onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reason1: e.target.value, reason2: '' }))}
+                        className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50"
+                      >
+                        <option value="">请选择一级原因</option>
+                        {Object.keys(ACCIDENT_CAUSE_MAP).map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
                       </select>
-                      <select className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                        <option value="">二级目录</option>
-                        <option value="追尾">追尾</option>
-                        <option value="侧翻">侧翻</option>
-                        <option value="碰撞">碰撞</option>
+                      <select
+                        value={accidentInfo.reason2}
+                        disabled={isLocked || !accidentInfo.reason1}
+                        onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reason2: e.target.value }))}
+                        className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50"
+                      >
+                        <option value="">请选择二级原因</option>
+                        {(ACCIDENT_CAUSE_MAP[accidentInfo.reason1] || []).map((sub) => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
