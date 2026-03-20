@@ -533,7 +533,11 @@ export default function App() {
     setIsAddOpportunityModalOpen(true);
   };
 
-  const generateInquiryOrderNo = () => `ORD-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`;
+  const generateInquiryOrderNo = () => {
+    const newNo = `ORD-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`;
+    console.log('[generateInquiryOrderNo] Generated:', newNo, 'existing orders count:', orders.length, 'order IDs:', orders.map(o => o.id));
+    return newNo;
+  };
 
   const generateCustomerCode = () => {
     const date = new Date();
@@ -665,6 +669,8 @@ export default function App() {
       return;
     }
 
+    console.log('[handleInquirySendConfirm] Sending order:', selectedOrderForDetail.id, 'customer:', selectedOrderForDetail.customer);
+
     const requiredFields = [
       selectedOrderForDetail.customer,
       selectedOrderForDetail.province,
@@ -735,6 +741,12 @@ export default function App() {
         inquiryUrl.searchParams.set('page', 'inquiry');
         inquiryUrl.searchParams.set('customerName', sentOrder.customer);
         inquiryUrl.searchParams.set('inquiryNo', sentOrder.id);
+        console.log('[handleInquirySendConfirm] Opening inquiry window with URL params:', {
+          page: 'inquiry',
+          customerName: sentOrder.customer,
+          inquiryNo: sentOrder.id,
+          fullUrl: inquiryUrl.toString(),
+        });
         window.open(inquiryUrl.toString(), '_blank');
       }
     }, 1000);
