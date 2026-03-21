@@ -576,6 +576,14 @@ export default function App() {
         return;
       }
 
+      // Demo 用户（DEMO-xxx）直接注入 mock 数据，无需任何网络请求
+      if (String(currentUser.userId || '').startsWith('DEMO-')) {
+        setPolicies(mockPolicies as any);
+        setClaimAssistPool(mockAssists);
+        setClaimsPool(mockCases);
+        return;
+      }
+
       try {
         await loadSystemBootstrap();
         const [policyRes, assistRes, casesRes] = await Promise.all([
