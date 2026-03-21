@@ -222,6 +222,7 @@ const RISK_COLORS = ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981'];
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/api';
 
 const parseMoney = (value: string) => Number(value.replace(/[¥,]/g, '')) || 0;
+const formatMoney = (value: number) => `¥${value.toLocaleString('zh-CN')}`;
 
 const matchRange = (amount: number, range: string) => {
   if (!range) return true;
@@ -335,7 +336,7 @@ export default function App() {
     />;
   }
 
-  const [activeItem, setActiveItem] = useState('理赔协助');
+  const [activeItem, setActiveItem] = useState('我的保单');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedGroup, setExpandedGroup] = useState('理赔工作台');
   const [resetKey, setResetKey] = useState(0);
@@ -1225,6 +1226,16 @@ export default function App() {
     );
   });
 
+  const policyTotals = filteredPolicies.reduce(
+    (acc, item) => {
+      acc.premium += parseMoney(item.premium);
+      acc.claimAmount += parseMoney(item.claimAmount);
+      acc.reportCount += Number(item.reportCount || 0);
+      return acc;
+    },
+    { premium: 0, claimAmount: 0, reportCount: 0 },
+  );
+
   const currentGroup =
     activeItem === '保单详情'
       ? '保单管理'
@@ -1619,6 +1630,9 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+                <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-slate-700">
+                  该页按业务视角展示保单台账。可按起止时间、保险公司、险种和金额区间筛选，点击保单号进入详情。
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse whitespace-nowrap">
                     <thead>
@@ -1703,6 +1717,19 @@ export default function App() {
                         </tr>
                       )}
                     </tbody>
+                    {filteredPolicies.length > 0 && (
+                      <tfoot>
+                        <tr className="border-t border-slate-300 bg-slate-50 text-sm font-semibold text-slate-800">
+                          <td className="px-4 py-3"></td>
+                          <td className="px-4 py-3" colSpan={7}>
+                            合计
+                          </td>
+                          <td className="px-4 py-3">{formatMoney(policyTotals.premium)}</td>
+                          <td className="px-4 py-3 text-rose-600">{formatMoney(policyTotals.claimAmount)}</td>
+                          <td className="px-4 py-3">{policyTotals.reportCount}</td>
+                        </tr>
+                      </tfoot>
+                    )}
                   </table>
                 </div>
               </div>
