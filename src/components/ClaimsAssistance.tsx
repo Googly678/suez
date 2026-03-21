@@ -136,10 +136,20 @@ export default function ClaimsAssistance({
   const [accidentEvidenceFiles, setAccidentEvidenceFiles] = useState<string[]>([]);
   const [relationEvidenceFiles, setRelationEvidenceFiles] = useState<string[]>([]);
   const [vehicleEvidenceFiles, setVehicleEvidenceFiles] = useState<string[]>([]);
+  const [directLossEvidenceFiles, setDirectLossEvidenceFiles] = useState<string[]>([]);
+  const [indirectLossEvidenceFiles, setIndirectLossEvidenceFiles] = useState<string[]>([]);
+  const [remarkEvidenceFiles, setRemarkEvidenceFiles] = useState<string[]>([]);
+  const [remarks, setRemarks] = useState('');
+  const [indirectLossList, setIndirectLossList] = useState([
+    { id: 1, amount: '', item: '', note: '' },
+  ]);
 
   const accidentEvidenceInputRef = useRef<HTMLInputElement>(null);
   const relationEvidenceInputRef = useRef<HTMLInputElement>(null);
   const vehicleEvidenceInputRef = useRef<HTMLInputElement>(null);
+  const directLossEvidenceInputRef = useRef<HTMLInputElement>(null);
+  const indirectLossEvidenceInputRef = useRef<HTMLInputElement>(null);
+  const remarkEvidenceInputRef = useRef<HTMLInputElement>(null);
 
   const availableCities = accidentInfo.province ? Object.keys(locationData[accidentInfo.province] || {}) : [];
   const availableDistricts = (accidentInfo.province && accidentInfo.city) ? locationData[accidentInfo.province][accidentInfo.city] : [];
@@ -209,6 +219,21 @@ export default function ClaimsAssistance({
 
   const updateLogisticsCompany = (id: number, value: string) => {
     setLogisticsCompanies((prev) => prev.map((item) => (item.id === id ? { ...item, name: value } : item)));
+  };
+
+  const addIndirectLoss = () => {
+    setIndirectLossList((prev) => [...prev, { id: Date.now(), amount: '', item: '', note: '' }]);
+  };
+
+  const removeIndirectLoss = (id: number) => {
+    if (indirectLossList.length <= 1) {
+      return;
+    }
+    setIndirectLossList((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const updateIndirectLoss = (id: number, field: 'amount' | 'item' | 'note', value: string) => {
+    setIndirectLossList((prev) => prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
   };
 
   const isLocked = ['已提交', '审核中', '已通过'].includes(selectedClaim?.status || '') || !canManage;
@@ -795,189 +820,277 @@ export default function ClaimsAssistance({
             </div>
           </section>
 
-          {/* 5. 直接损失 */}
+          {/* 5. 货损情况 */}
           <section id="step-5" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-32">
             <div className="w-full px-6 py-4 flex items-center justify-between bg-white border-b border-slate-100">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-blue-500"></span>
-                直接损失
-              </h3>
+              <h3 className="text-lg font-semibold text-slate-900">货损情况</h3>
+              <button
+                type="button"
+                onClick={() => directLossEvidenceInputRef.current?.click()}
+                className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+              >
+                上传佐证
+              </button>
+              <input
+                ref={directLossEvidenceInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(event) => appendEvidenceFiles(event, setDirectLossEvidenceFiles)}
+              />
             </div>
-            
-            <div className="p-6">
-              <div className="space-y-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-slate-700">受损货物清单</label>
-                      <button 
-                        onClick={addCargo}
-                        className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                      >
-                        <Plus className="w-4 h-4" /> 添加货物
-                      </button>
-                    </div>
-                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                      <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                            <th className="px-4 py-2 w-16">序号</th>
-                            <th className="px-4 py-2">品名</th>
-                            <th className="px-4 py-2 w-24">数量</th>
-                            <th className="px-4 py-2 w-32">包装</th>
-                            <th className="px-4 py-2 w-32">单价</th>
-                            <th className="px-4 py-2 w-32">损失金额</th>
-                            <th className="px-4 py-2 w-40">损失类型</th>
-                            <th className="px-4 py-2 w-16 text-center">操作</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {cargoList.map((item, index) => (
-                            <tr key={item.id}>
-                              <td className="px-4 py-2 text-slate-500">{index + 1}</td>
-                              <td className="px-4 py-2">
-                                <input 
-                                  type="text" 
-                                  value={item.name}
-                                  onChange={(e) => updateCargo(item.id, 'name', e.target.value)}
-                                  className="w-full px-2 py-1 border border-slate-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" 
-                                  placeholder="输入品名" 
-                                />
-                              </td>
-                              <td className="px-4 py-2">
-                                <input 
-                                  type="number" 
-                                  value={item.quantity}
-                                  onChange={(e) => updateCargo(item.id, 'quantity', e.target.value)}
-                                  className="w-full px-2 py-1 border border-slate-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" 
-                                  placeholder="数量" 
-                                />
-                              </td>
-                              <td className="px-4 py-2">
-                                <select 
-                                  value={item.unit}
-                                  onChange={(e) => updateCargo(item.id, 'unit', e.target.value)}
-                                  className="w-full px-2 py-1 border border-slate-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white"
-                                >
-                                  <option value="">选择包装</option>
-                                  <option value="木箱">木箱</option>
-                                  <option value="纸箱">纸箱</option>
-                                  <option value="托盘">托盘</option>
-                                  <option value="裸装">裸装 (包括缠绕膜)</option>
-                                </select>
-                              </td>
-                              <td className="px-4 py-2">
-                                <input 
-                                  type="number" 
-                                  value={item.price}
-                                  onChange={(e) => updateCargo(item.id, 'price', e.target.value)}
-                                  className="w-full px-2 py-1 border border-slate-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" 
-                                  placeholder="单价" 
-                                />
-                              </td>
-                              <td className="px-4 py-2">
-                                <input 
-                                  type="number" 
-                                  value={item.amount}
-                                  onChange={(e) => updateCargo(item.id, 'amount', e.target.value)}
-                                  className="w-full px-2 py-1 border border-slate-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" 
-                                  placeholder="金额" 
-                                />
-                              </td>
-                              <td className="px-4 py-2">
-                                <select 
-                                  value={item.type}
-                                  onChange={(e) => updateCargo(item.id, 'type', e.target.value)}
-                                  className="w-full px-2 py-1 border border-slate-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white"
-                                >
-                                  <option value="">选择类型</option>
-                                  <option value="报废">报废</option>
-                                  <option value="更换包装">更换包装</option>
-                                  <option value="清洗或再加工">清洗或再加工</option>
-                                  <option value="贬值折价">贬值折价</option>
-                                  <option value="维修费">维修费</option>
-                                </select>
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                <button 
-                                  onClick={() => removeCargo(item.id)}
-                                  disabled={cargoList.length === 1}
-                                  className={`p-1 rounded transition-colors ${cargoList.length === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-50 hover:text-rose-700'}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr className="bg-slate-50 border-t border-slate-200 font-bold text-slate-900">
-                            <td colSpan={5} className="px-4 py-2 text-right">合计损失金额:</td>
-                            <td className="px-4 py-2 text-rose-600">¥{cargoList.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2)}</td>
-                            <td colSpan={2}></td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-900">间接损失</h4>
-                      <p className="text-xs text-slate-500 mt-0.5">如涉及人工费、运输费等额外支出，请开启录入</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const newState = !showIndirectLoss;
-                        setShowIndirectLoss(newState);
-                        if (newState) {
-                          setTimeout(() => scrollToStep(6), 100);
-                        }
-                      }}
-                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                        showIndirectLoss 
-                          ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100' 
-                          : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
-                      }`}
-                    >
-                      {showIndirectLoss ? '取消间接损失' : '添加间接损失'}
-                    </button>
-                  </div>
-                </div>
+            <div className="p-6 space-y-4">
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                      <th className="px-4 py-2 w-16">序号</th>
+                      <th className="px-4 py-2">品名</th>
+                      <th className="px-4 py-2 w-24">数量</th>
+                      <th className="px-4 py-2 w-32">包装</th>
+                      <th className="px-4 py-2 w-32">单价</th>
+                      <th className="px-4 py-2 w-32">损失金额</th>
+                      <th className="px-4 py-2 w-40">损失类型</th>
+                      <th className="px-4 py-2 w-16 text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {cargoList.map((item, index) => (
+                      <tr key={item.id}>
+                        <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => updateCargo(item.id, 'name', e.target.value)}
+                            className="w-full px-2 py-1 border border-slate-200 rounded outline-none"
+                            placeholder="品名"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => updateCargo(item.id, 'quantity', e.target.value)}
+                            className="w-full px-2 py-1 border border-slate-200 rounded outline-none"
+                            placeholder="数量"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <select
+                            value={item.unit}
+                            onChange={(e) => updateCargo(item.id, 'unit', e.target.value)}
+                            className="w-full px-2 py-1 border border-slate-200 rounded outline-none bg-white"
+                          >
+                            <option value="">包装</option>
+                            <option value="木箱">木箱</option>
+                            <option value="纸箱">纸箱</option>
+                            <option value="编织袋">编织袋</option>
+                            <option value="裸装">裸装(含缠绕膜)</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number"
+                            value={item.price}
+                            onChange={(e) => updateCargo(item.id, 'price', e.target.value)}
+                            className="w-full px-2 py-1 border border-slate-200 rounded outline-none"
+                            placeholder="单价"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number"
+                            value={item.amount}
+                            onChange={(e) => updateCargo(item.id, 'amount', e.target.value)}
+                            className="w-full px-2 py-1 border border-slate-200 rounded outline-none"
+                            placeholder="损失金额"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <select
+                            value={item.type}
+                            onChange={(e) => updateCargo(item.id, 'type', e.target.value)}
+                            className="w-full px-2 py-1 border border-slate-200 rounded outline-none bg-white"
+                          >
+                            <option value="">损失类型</option>
+                            <option value="报废">报废</option>
+                            <option value="更换包装">更换包装</option>
+                            <option value="清洗或再加工">清洗或再加工</option>
+                            <option value="贬值折价">贬值折价</option>
+                            <option value="维修费">维修费</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-2 text-center">
+                          <button
+                            onClick={() => removeCargo(item.id)}
+                            disabled={cargoList.length === 1}
+                            className={`p-1 rounded ${cargoList.length === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-50'}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={addCargo}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  新增货损
+                </button>
+                <div className="text-xs text-slate-500">已上传 {directLossEvidenceFiles.length} 份货损佐证</div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !showIndirectLoss;
+                    setShowIndirectLoss(next);
+                    if (next) {
+                      setTimeout(() => scrollToStep(6), 80);
+                    }
+                  }}
+                  className="px-4 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50"
+                >
+                  {showIndirectLoss ? '收起间接损失' : '添加间接损失'}
+                </button>
+              </div>
+            </div>
           </section>
-          
+
           {showIndirectLoss && (
             <section id="step-6" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-32">
               <div className="w-full px-6 py-4 flex items-center justify-between bg-white border-b border-slate-100">
-                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <span className="w-1 h-5 rounded-full bg-rose-500"></span>
-                  间接损失
-                </h3>
+                <h3 className="text-lg font-semibold text-slate-900">间接损失</h3>
+                <button
+                  type="button"
+                  onClick={() => indirectLossEvidenceInputRef.current?.click()}
+                  className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                >
+                  上传佐证
+                </button>
+                <input
+                  ref={indirectLossEvidenceInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(event) => appendEvidenceFiles(event, setIndirectLossEvidenceFiles)}
+                />
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">人工费用</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">¥</span>
-                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="0.00" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">额外运费</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">¥</span>
-                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="0.00" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-sm font-medium text-slate-700">费用说明</label>
-                    <textarea rows={3} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="请详细说明间接损失的构成及计算依据..."></textarea>
-                  </div>
+
+              <div className="p-6 space-y-4">
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                        <th className="px-4 py-2 w-16">序号</th>
+                        <th className="px-4 py-2 w-40">损失金额</th>
+                        <th className="px-4 py-2 w-48">损失项目</th>
+                        <th className="px-4 py-2">损失说明</th>
+                        <th className="px-4 py-2 w-16 text-center">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {indirectLossList.map((item, index) => (
+                        <tr key={item.id}>
+                          <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              value={item.amount}
+                              onChange={(e) => updateIndirectLoss(item.id, 'amount', e.target.value)}
+                              className="w-full px-2 py-1 border border-slate-200 rounded outline-none"
+                              placeholder="损失金额"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <select
+                              value={item.item}
+                              onChange={(e) => updateIndirectLoss(item.id, 'item', e.target.value)}
+                              className="w-full px-2 py-1 border border-slate-200 rounded outline-none bg-white"
+                            >
+                              <option value="">请选择</option>
+                              <option value="人工费">人工费</option>
+                              <option value="提运费">提运费</option>
+                              <option value="设备使用费">设备使用费</option>
+                              <option value="其他">其他</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={item.note}
+                              onChange={(e) => updateIndirectLoss(item.id, 'note', e.target.value)}
+                              className="w-full px-2 py-1 border border-slate-200 rounded outline-none"
+                              placeholder="损失说明"
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <button
+                              onClick={() => removeIndirectLoss(item.id)}
+                              disabled={indirectLossList.length === 1}
+                              className={`p-1 rounded ${indirectLossList.length === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-50'}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={addIndirectLoss}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增间接损失
+                  </button>
+                  <div className="text-xs text-slate-500">已上传 {indirectLossEvidenceFiles.length} 份间接损失佐证</div>
                 </div>
               </div>
             </section>
           )}
+
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <label className="block text-sm font-medium text-slate-700 mb-2">备注</label>
+            <div className="flex items-end gap-3">
+              <textarea
+                rows={4}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="备注说明..."
+                className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md"
+              />
+              <button
+                type="button"
+                onClick={() => remarkEvidenceInputRef.current?.click()}
+                className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+              >
+                上传佐证
+              </button>
+              <input
+                ref={remarkEvidenceInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(event) => appendEvidenceFiles(event, setRemarkEvidenceFiles)}
+              />
+            </div>
+            <div className="mt-1 text-xs text-slate-500">已上传 {remarkEvidenceFiles.length} 份备注附件</div>
+          </section>
         </div>
 
         {/* Right Side Stepper Sidebar */}
@@ -1066,7 +1179,7 @@ export default function ClaimsAssistance({
             disabled={isLocked || !canSubmit}
             className="px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
           >
-            提交
+            确认提交
           </button>
           </div>
         </div>
