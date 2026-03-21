@@ -126,6 +126,75 @@ const mockOpportunityData = [
   { id: 'OPP-2026-004', customerCode: 'GJ004', name: '公交集团智能调度系统硬件', type: '库外客户', source: '招投标', value: '¥5,000,000', contact: '陈主任', phone: '13600136000', status: '新增' },
 ];
 
+const mockPolicies = [
+  { policyNo: 'POL-2025-001', customerName: '顺丰速运', startDate: '2025-01-01', endDate: '2026-01-01', insurer: '中国太平洋保险', insuranceType: '货物运输险', coverage: '¥2,000,000', premium: '¥18,000', claimAmount: '¥5,200', reportCount: 2 },
+  { policyNo: 'POL-2025-002', customerName: '滴滴出行', startDate: '2025-03-01', endDate: '2026-03-01', insurer: '人保财险', insuranceType: '商用车险', coverage: '¥5,000,000', premium: '¥42,000', claimAmount: '¥12,800', reportCount: 1 },
+  { policyNo: 'POL-2025-003', customerName: '跨越速运', startDate: '2025-06-01', endDate: '2026-06-01', insurer: '平安财险', insuranceType: '货物运输险', coverage: '¥1,500,000', premium: '¥13,500', claimAmount: '--', reportCount: 0 },
+];
+
+const mockAssists = [
+  {
+    assistNo: 'ASSIST-2025-001', relatedCaseNo: 'CASE-2025-001', policyNo: 'POL-2025-001', customerCode: 'SF001',
+    customer: '顺丰速运', company: '顺丰速运有限公司', type: '货物运输险', insured: '顺丰速运',
+    startTime: '2025-08-01', endTime: '2025-08-15', status: '已通过',
+    latestReviewComment: '经核查，赔付金额已确认。', reportTime: '2025-08-01 09:30:00', updatedAt: '2025-08-16 14:20:00',
+  },
+  {
+    assistNo: 'ASSIST-2025-002', relatedCaseNo: '', policyNo: 'POL-2025-002', customerCode: 'DD002',
+    customer: '滴滴出行', company: '滴滴出行科技有限公司', type: '商用车险', insured: '滴滴出行',
+    startTime: '2025-10-10', endTime: '', status: '审核中',
+    latestReviewComment: '', reportTime: '2025-10-10 11:00:00', updatedAt: '2025-10-12 09:00:00',
+  },
+  {
+    assistNo: 'ASSIST-2026-003', relatedCaseNo: '', policyNo: 'POL-2025-003', customerCode: 'KY003',
+    customer: '跨越速运', company: '跨越速运集团', type: '货物运输险', insured: '跨越速运',
+    startTime: '2026-01-05', endTime: '', status: '已暂存',
+    latestReviewComment: '', reportTime: '2026-01-05 14:00:00', updatedAt: '2026-01-05 14:00:00',
+  },
+];
+
+const mockCases = [
+  {
+    id: 'CASE-2025-001', assistNo: 'ASSIST-2025-001', policyNo: 'POL-2025-001', customerCode: 'SF001',
+    insured: '顺丰速运', company: '顺丰速运有限公司', type: '货物运输险', status: '定损协议通过',
+    reportTime: '2025-08-01', reviewDecision: '通过', reviewComment: '损失属实，赔付¥5,200。',
+    reviewTime: '2025-08-20', reporter: '理赔协助', startTime: '', endTime: '',
+  },
+  {
+    id: 'CASE-2025-002', assistNo: 'ASSIST-2025-002', policyNo: 'POL-2025-002', customerCode: 'DD002',
+    insured: '滴滴出行', company: '滴滴出行科技有限公司', type: '商用车险', status: '审核中',
+    reportTime: '2025-10-10', reviewDecision: '', reviewComment: '', reviewTime: '',
+    reporter: '理赔协助', startTime: '', endTime: '',
+  },
+  {
+    id: 'CASE-2025-003', assistNo: '', policyNo: 'POL-2025-001', customerCode: 'SF001',
+    insured: '顺丰速运', company: '顺丰速运有限公司', type: '货物运输险', status: '公估中',
+    reportTime: '2025-09-15', reviewDecision: '', reviewComment: '', reviewTime: '',
+    reporter: '理赔协助', startTime: '', endTime: '',
+  },
+];
+
+const mockOrders = [
+  {
+    id: 'ORD-2026-001', customerCode: 'SF001', policyNo: '', source: '商机转化', contract: '',
+    customer: '顺丰速运', province: '广东省', city: '深圳市', district: '南山区',
+    industry: '物流运输', contact: '张伟', phone: '13800138000',
+    value: '¥1,500,000', date: '2026-02-15', status: '已发送', isNew: false,
+  },
+  {
+    id: 'ORD-2026-002', customerCode: 'DD002', policyNo: '', source: '商机转化', contract: '',
+    customer: '滴滴出行', province: '北京市', city: '北京市', district: '海淀区',
+    industry: '网约车', contact: '李娜', phone: '13900139000',
+    value: '¥800,000', date: '2026-03-01', status: '已建单', isNew: false,
+  },
+  {
+    id: 'ORD-2026-003', customerCode: 'KY003', policyNo: '', source: '主动开发', contract: '',
+    customer: '跨越速运', province: '广东省', city: '深圳市', district: '宝安区',
+    industry: '物流运输', contact: '王强', phone: '13700137000',
+    value: '¥2,100,000', date: '2026-01-20', status: '已回填', isNew: false,
+  },
+];
+
 const purchaseData = [
   { year: '2023', amount: 120 },
   { year: '2024', amount: 180 },
@@ -281,7 +350,7 @@ export default function App() {
 
   const [customers, setCustomers] = useState(mockCustomerData);
   const [opportunities, setOpportunities] = useState(mockOpportunityData);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>(mockOrders);
   const [policies, setPolicies] = useState<PolicyRow[]>([]);
   const [claimAssistPool, setClaimAssistPool] = useState<any[]>([]);
   const [claimsPool, setClaimsPool] = useState<any[]>([]);
@@ -523,7 +592,10 @@ export default function App() {
         setClaimAssistPool(assistRows);
         setClaimsPool(caseRows);
       } catch (error) {
-        console.warn('Backend claims data not available, fallback to local state.', error);
+        console.warn('Backend claims data not available, using demo mock data.', error);
+        setPolicies(mockPolicies as any);
+        setClaimAssistPool(mockAssists);
+        setClaimsPool(mockCases);
       }
     };
 
