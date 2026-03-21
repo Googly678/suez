@@ -51,6 +51,9 @@ export default function AppraisalClaims({
   const [guideRows, setGuideRows] = useState([
     { id: 1, date: '', feedback: '', note: '' },
   ]);
+  const [insurerAuditRows, setInsurerAuditRows] = useState([
+    { id: 1, date: '', opinion: '', note: '' },
+  ]);
   const surveyEvidenceInputRef = React.useRef<HTMLInputElement>(null);
   const surveySummaryEvidenceInputRef = React.useRef<HTMLInputElement>(null);
   const stageConfig =
@@ -158,6 +161,10 @@ export default function AppraisalClaims({
     setGuideRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
+  const updateInsurerAuditRow = (id: number, field: 'date' | 'opinion' | 'note', value: string) => {
+    setInsurerAuditRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+  };
+
   useEffect(() => {
     if (initialSelectedCase) {
       setSelectedCase(initialSelectedCase);
@@ -165,6 +172,168 @@ export default function AppraisalClaims({
       onInitialSelectedCaseConsumed?.();
     }
   }, [initialSelectedCase, onInitialSelectedCaseConsumed]);
+
+  if (selectedCase && reviewStage === 'insurer') {
+    return (
+      <div className="flex flex-col h-full relative flex-1">
+        <div className="sticky top-0 -mx-6 -mt-6 lg:-mx-8 lg:-mt-6 pt-6 px-6 lg:px-8 bg-slate-50 z-40 pb-3">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-3 flex items-center justify-between gap-6">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => setSelectedCase(null)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 text-slate-600" />
+              </button>
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0">
+                <Calculator className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">案件编号</div>
+                <div className="text-sm font-bold text-slate-900 truncate">{selectedCase.id}</div>
+              </div>
+            </div>
+            <span className={`px-2 py-1 rounded text-[10px] font-bold ${getStatusTone(selectedCase.status)}`}>
+              {selectedCase.status}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex-1 mt-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6 pb-24">
+          <div className="space-y-6">
+            <div className="text-sm text-rose-600">页面可以汇总查看案件得失和理赔录入信息，以及查勘新信息。</div>
+
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-semibold text-slate-900">审核意见</h3>
+              </div>
+              <div className="p-6">
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                        <th className="px-4 py-2 w-40">日期</th>
+                        <th className="px-4 py-2">审核意见</th>
+                        <th className="px-4 py-2">备注登记</th>
+                        <th className="px-4 py-2 w-28 text-center">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {insurerAuditRows.map((row) => (
+                        <tr key={row.id}>
+                          <td className="px-4 py-2">
+                            <input
+                              type="date"
+                              value={row.date}
+                              onChange={(e) => updateInsurerAuditRow(row.id, 'date', e.target.value)}
+                              disabled={!isReviewEditable}
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={row.opinion}
+                              onChange={(e) => updateInsurerAuditRow(row.id, 'opinion', e.target.value)}
+                              disabled={!isReviewEditable}
+                              placeholder="审核意见"
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={row.note}
+                              onChange={(e) => updateInsurerAuditRow(row.id, 'note', e.target.value)}
+                              disabled={!isReviewEditable}
+                              placeholder="备注"
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                type="button"
+                                disabled={!isReviewEditable}
+                                onClick={() => {
+                                  setSelectedCase({ ...selectedCase, reviewDecision: 'approve' });
+                                  setReviewComment(row.opinion || reviewComment);
+                                  setShowReviewConfirm(true);
+                                }}
+                                className="px-2 py-1 text-xs border border-emerald-300 text-emerald-700 rounded hover:bg-emerald-50 disabled:opacity-50"
+                              >
+                                同意
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!isReviewEditable}
+                                onClick={() => {
+                                  setSelectedCase({ ...selectedCase, reviewDecision: 'reject' });
+                                  setReviewComment(row.opinion || reviewComment);
+                                  setShowReviewConfirm(true);
+                                }}
+                                className="px-2 py-1 text-xs border border-rose-300 text-rose-700 rounded hover:bg-rose-50 disabled:opacity-50"
+                              >
+                                退回
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <button
+              type="button"
+              disabled={!isReviewEditable}
+              className="px-6 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              一键生成理赔报告
+            </button>
+          </div>
+
+          <aside className="rounded-xl border border-rose-300 bg-white p-4 text-sm text-slate-600 min-h-[220px]">
+            理赔员请填写完整案件报告
+          </aside>
+        </div>
+
+        {showReviewConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">确认提交</h3>
+              <p className="text-sm text-slate-600 mb-6">
+                确认提交本次审核结论吗？提交后状态将更新为{selectedCase.reviewDecision === 'approve' ? stageConfig.approvedStatus : stageConfig.rejectedStatus}。
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowReviewConfirm(false)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-md hover:bg-slate-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    onAppraisalSubmit(selectedCase.id, {
+                      reviewDecision: selectedCase.reviewDecision,
+                      reviewComment,
+                    }, reviewStage);
+                    setShowReviewConfirm(false);
+                    setSelectedCase(null);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  确认
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (selectedCase) {
     return (
