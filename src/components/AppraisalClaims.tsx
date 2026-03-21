@@ -47,6 +47,10 @@ export default function AppraisalClaims({
   const [surveyLocation, setSurveyLocation] = useState('');
   const [surveyEvidenceCount, setSurveyEvidenceCount] = useState(0);
   const [surveySummaryEvidenceCount, setSurveySummaryEvidenceCount] = useState(0);
+  const [insurerOpinion, setInsurerOpinion] = useState('');
+  const [guideRows, setGuideRows] = useState([
+    { id: 1, date: '', feedback: '', note: '' },
+  ]);
   const surveyEvidenceInputRef = React.useRef<HTMLInputElement>(null);
   const surveySummaryEvidenceInputRef = React.useRef<HTMLInputElement>(null);
   const stageConfig =
@@ -144,6 +148,14 @@ export default function AppraisalClaims({
       setCount((prev) => prev + count);
     }
     event.target.value = '';
+  };
+
+  const addGuideRow = () => {
+    setGuideRows((prev) => [...prev, { id: Date.now(), date: '', feedback: '', note: '' }]);
+  };
+
+  const updateGuideRow = (id: number, field: 'date' | 'feedback' | 'note', value: string) => {
+    setGuideRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
   useEffect(() => {
@@ -394,62 +406,108 @@ export default function AppraisalClaims({
 
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900">审核处理</h3>
+              <h3 className="text-lg font-semibold text-slate-900">保险公司认定意见</h3>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="audit_result"
-                    className="w-4 h-4 text-blue-600"
-                    checked={selectedCase.reviewDecision === 'approve'}
-                    disabled={!isReviewEditable}
-                    onChange={() => setSelectedCase({ ...selectedCase, reviewDecision: 'approve' })}
-                  />
-                  <span className="text-sm">{stageConfig.approveLabel}</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="audit_result"
-                    className="w-4 h-4 text-blue-600"
-                    checked={selectedCase.reviewDecision === 'reject'}
-                    disabled={!isReviewEditable}
-                    onChange={() => setSelectedCase({ ...selectedCase, reviewDecision: 'reject' })}
-                  />
-                  <span className="text-sm">{stageConfig.rejectLabel}</span>
-                </label>
-              </div>
+            <div className="p-6">
               <textarea
-                rows={3}
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
+                rows={4}
+                value={insurerOpinion}
+                onChange={(e) => setInsurerOpinion(e.target.value)}
                 disabled={!isReviewEditable}
-                placeholder="审核意见"
+                placeholder="录入保险公司认定意见"
                 className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
               />
+            </div>
+          </section>
+
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">理赔引导录入</h3>
+              <button
+                type="button"
+                onClick={addGuideRow}
+                disabled={!isReviewEditable}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <Plus className="w-3.5 h-3.5" /> 添加
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                      <th className="px-4 py-2 w-40">日期</th>
+                      <th className="px-4 py-2">回退意见</th>
+                      <th className="px-4 py-2">备注记录</th>
+                      <th className="px-4 py-2 w-28 text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {guideRows.map((row) => (
+                      <tr key={row.id}>
+                        <td className="px-4 py-2">
+                          <input
+                            type="date"
+                            value={row.date}
+                            onChange={(e) => updateGuideRow(row.id, 'date', e.target.value)}
+                            disabled={!isReviewEditable}
+                            className="w-full px-2 py-1 border border-slate-200 rounded"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={row.feedback}
+                            onChange={(e) => updateGuideRow(row.id, 'feedback', e.target.value)}
+                            disabled={!isReviewEditable}
+                            placeholder="回退意见"
+                            className="w-full px-2 py-1 border border-slate-200 rounded"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={row.note}
+                            onChange={(e) => updateGuideRow(row.id, 'note', e.target.value)}
+                            disabled={!isReviewEditable}
+                            placeholder="备注"
+                            className="w-full px-2 py-1 border border-slate-200 rounded"
+                          />
+                        </td>
+                        <td className="px-4 py-2 text-center">
+                          <button className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50" disabled={!isReviewEditable}>
+                            发送回函
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
         </div>
 
         {/* Bottom Toolbar */}
-        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-end items-center px-6 lg:px-8 gap-4">
-          <button className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" disabled={!isReviewEditable}>
-            保存草稿
-          </button>
-          <button 
+        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-between items-center px-6 lg:px-8 gap-4">
+          <button
+            type="button"
             onClick={() => {
-              if (selectedCase.reviewDecision) {
-                setShowReviewConfirm(true);
-              } else {
-                alert('请选择审核结论');
-              }
+              setSelectedCase({ ...selectedCase, reviewDecision: selectedCase.reviewDecision || 'approve' });
+              setShowReviewConfirm(true);
             }}
             disabled={!isReviewEditable}
-            className="px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
           >
-            {stageConfig.submitButtonText}
+            提交
+          </button>
+          <button
+            type="button"
+            disabled={!isReviewEditable}
+            className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
+          >
+            一键生成公估报告
           </button>
         </div>
 
