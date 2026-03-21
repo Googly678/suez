@@ -118,6 +118,10 @@ export default function ClaimsAssistance({
     time: '',
     reportTime: '',
     reportNo: '',
+    departureProvince: '',
+    departureCity: '',
+    destinationProvince: '',
+    destinationCity: '',
     province: '',
     city: '',
     district: '',
@@ -126,9 +130,21 @@ export default function ClaimsAssistance({
     reason2: '',
     description: ''
   });
+  const [truckPlateNo, setTruckPlateNo] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+
+  const [accidentEvidenceFiles, setAccidentEvidenceFiles] = useState<string[]>([]);
+  const [relationEvidenceFiles, setRelationEvidenceFiles] = useState<string[]>([]);
+  const [vehicleEvidenceFiles, setVehicleEvidenceFiles] = useState<string[]>([]);
+
+  const accidentEvidenceInputRef = useRef<HTMLInputElement>(null);
+  const relationEvidenceInputRef = useRef<HTMLInputElement>(null);
+  const vehicleEvidenceInputRef = useRef<HTMLInputElement>(null);
 
   const availableCities = accidentInfo.province ? Object.keys(locationData[accidentInfo.province] || {}) : [];
   const availableDistricts = (accidentInfo.province && accidentInfo.city) ? locationData[accidentInfo.province][accidentInfo.city] : [];
+  const availableDepartureCities = accidentInfo.departureProvince ? Object.keys(locationData[accidentInfo.departureProvince] || {}) : [];
+  const availableDestinationCities = accidentInfo.destinationProvince ? Object.keys(locationData[accidentInfo.destinationProvince] || {}) : [];
 
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -204,6 +220,17 @@ export default function ClaimsAssistance({
       status: '已提交',
     });
     setTimeout(() => setSelectedClaim(null), 300);
+  };
+
+  const appendEvidenceFiles = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    setFiles: React.Dispatch<React.SetStateAction<string[]>>,
+  ) => {
+    const names = Array.from(event.target.files || []).map((file) => file.name);
+    if (names.length > 0) {
+      setFiles((prev) => [...prev, ...names]);
+    }
+    event.target.value = '';
   };
 
   const parseMoneyValue = (value: any) => {
@@ -483,94 +510,172 @@ export default function ClaimsAssistance({
               </h3>
             </div>
             
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">出险时间</label>
-                    <input type="datetime-local" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">报案时间</label>
-                    <input type="datetime-local" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">报案号 (保司)</label>
-                    <input type="text" placeholder="请输入保险公司报案号" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                  </div>
-                  
-                  <div className="space-y-1.5 lg:col-span-3">
-                    <label className="text-sm font-medium text-slate-700">出险地点</label>
-                    <div className="flex gap-2">
-                      <select 
-                        value={accidentInfo.province}
-                        onChange={(e) => setAccidentInfo({ ...accidentInfo, province: e.target.value, city: '', district: '' })}
-                        className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                      >
-                        <option value="">选择省份</option>
-                        {Object.keys(locationData).map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                      <select 
-                        value={accidentInfo.city}
-                        onChange={(e) => setAccidentInfo({ ...accidentInfo, city: e.target.value, district: '' })}
-                        disabled={!accidentInfo.province}
-                        className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white disabled:bg-slate-50"
-                      >
-                        <option value="">选择城市</option>
-                        {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                      <select 
-                        value={accidentInfo.district}
-                        onChange={(e) => setAccidentInfo({ ...accidentInfo, district: e.target.value })}
-                        disabled={!accidentInfo.city}
-                        className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white disabled:bg-slate-50"
-                      >
-                        <option value="">选择区县</option>
-                        {availableDistricts.map(d => <option key={d} value={d}>{d}</option>)}
-                      </select>
-                      <input 
-                        type="text" 
-                        placeholder="详细地址" 
-                        value={accidentInfo.address}
-                        onChange={(e) => setAccidentInfo({ ...accidentInfo, address: e.target.value })}
-                        className="flex-[2] px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" 
-                      />
-                    </div>
-                  </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">出险时间</label>
+                  <input
+                    type="datetime-local"
+                    value={accidentInfo.time}
+                    onChange={(e) => setAccidentInfo((prev) => ({ ...prev, time: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+              </div>
 
-                  <div className="space-y-1.5 lg:col-span-3">
-                    <label className="text-sm font-medium text-slate-700">事故原因</label>
-                    <div className="flex gap-2">
-                      <select
-                        value={accidentInfo.reason1}
-                        disabled={isLocked}
-                        onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reason1: e.target.value, reason2: '' }))}
-                        className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50"
-                      >
-                        <option value="">请选择一级原因</option>
-                        {Object.keys(ACCIDENT_CAUSE_MAP).map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                      <select
-                        value={accidentInfo.reason2}
-                        disabled={isLocked || !accidentInfo.reason1}
-                        onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reason2: e.target.value }))}
-                        className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50"
-                      >
-                        <option value="">请选择二级原因</option>
-                        {(ACCIDENT_CAUSE_MAP[accidentInfo.reason1] || []).map((sub) => (
-                          <option key={sub} value={sub}>{sub}</option>
-                        ))}
-                      </select>
-                    </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">启运地</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={accidentInfo.departureProvince}
+                      onChange={(e) => setAccidentInfo((prev) => ({ ...prev, departureProvince: e.target.value, departureCity: '' }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-white"
+                    >
+                      <option value="">省</option>
+                      {Object.keys(locationData).map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    <select
+                      value={accidentInfo.departureCity}
+                      onChange={(e) => setAccidentInfo((prev) => ({ ...prev, departureCity: e.target.value }))}
+                      disabled={!accidentInfo.departureProvince}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-white disabled:bg-slate-50"
+                    >
+                      <option value="">市</option>
+                      {availableDepartureCities.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
-
-                  <div className="space-y-1.5 lg:col-span-3">
-                    <label className="text-sm font-medium text-slate-700">事故情况说明</label>
-                    <textarea rows={3} placeholder="请详细描述事故发生的过程..." className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"></textarea>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">目的地</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={accidentInfo.destinationProvince}
+                      onChange={(e) => setAccidentInfo((prev) => ({ ...prev, destinationProvince: e.target.value, destinationCity: '' }))}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-white"
+                    >
+                      <option value="">省</option>
+                      {Object.keys(locationData).map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    <select
+                      value={accidentInfo.destinationCity}
+                      onChange={(e) => setAccidentInfo((prev) => ({ ...prev, destinationCity: e.target.value }))}
+                      disabled={!accidentInfo.destinationProvince}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-white disabled:bg-slate-50"
+                    >
+                      <option value="">市</option>
+                      {availableDestinationCities.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">出险地点</label>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={accidentInfo.province}
+                    onChange={(e) => setAccidentInfo({ ...accidentInfo, province: e.target.value, city: '', district: '' })}
+                    className="w-full md:w-[150px] px-3 py-2 text-sm border border-slate-300 rounded-md bg-white"
+                  >
+                    <option value="">省</option>
+                    {Object.keys(locationData).map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <select
+                    value={accidentInfo.city}
+                    onChange={(e) => setAccidentInfo({ ...accidentInfo, city: e.target.value, district: '' })}
+                    disabled={!accidentInfo.province}
+                    className="w-full md:w-[150px] px-3 py-2 text-sm border border-slate-300 rounded-md bg-white disabled:bg-slate-50"
+                  >
+                    <option value="">市</option>
+                    {availableCities.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input
+                    type="text"
+                    value={accidentInfo.address}
+                    onChange={(e) => setAccidentInfo({ ...accidentInfo, address: e.target.value })}
+                    placeholder="详细地点"
+                    className="flex-1 min-w-[240px] px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">报案时间</label>
+                  <input
+                    type="datetime-local"
+                    value={accidentInfo.reportTime}
+                    onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reportTime: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">报案号</label>
+                  <input
+                    type="text"
+                    value={accidentInfo.reportNo}
+                    onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reportNo: e.target.value }))}
+                    placeholder="录入保司报案号"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">事故原因</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-slate-500">一级</span>
+                  <select
+                    value={accidentInfo.reason1}
+                    disabled={isLocked}
+                    onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reason1: e.target.value, reason2: '' }))}
+                    className="w-full md:w-[220px] px-3 py-2 text-sm border border-slate-300 rounded-md bg-white disabled:bg-slate-50"
+                  >
+                    <option value="">请选择</option>
+                    {Object.keys(ACCIDENT_CAUSE_MAP).map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                  <span className="text-sm text-slate-500">二级</span>
+                  <select
+                    value={accidentInfo.reason2}
+                    disabled={isLocked || !accidentInfo.reason1}
+                    onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reason2: e.target.value }))}
+                    className="w-full md:w-[280px] px-3 py-2 text-sm border border-slate-300 rounded-md bg-white disabled:bg-slate-50"
+                  >
+                    <option value="">请选择</option>
+                    {(ACCIDENT_CAUSE_MAP[accidentInfo.reason1] || []).map((sub) => <option key={sub} value={sub}>{sub}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">详细事故经过</label>
+                <div className="flex items-end gap-3">
+                  <textarea
+                    rows={4}
+                    value={accidentInfo.description}
+                    onChange={(e) => setAccidentInfo((prev) => ({ ...prev, description: e.target.value }))}
+                    placeholder="请按时间线描述事故经过"
+                    className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => accidentEvidenceInputRef.current?.click()}
+                    className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                  >
+                    上传佐证
+                  </button>
+                  <input
+                    ref={accidentEvidenceInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => appendEvidenceFiles(event, setAccidentEvidenceFiles)}
+                  />
+                </div>
+                <div className="mt-1 text-xs text-slate-500">已上传 {accidentEvidenceFiles.length} 份佐证</div>
+              </div>
+            </div>
           </section>
 
           {/* 3. 承托关系 */}
@@ -582,55 +687,70 @@ export default function ClaimsAssistance({
               </h3>
             </div>
             
-            <div className="p-6">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 space-y-5">
-                <div className="flex flex-wrap items-center gap-3 xl:gap-4">
-                  <div className="w-full xl:w-[180px] rounded-xl border border-slate-300 bg-white px-4 py-3">
-                    <div className="text-[11px] font-bold text-slate-500 mb-2">发货方</div>
-                    <input type="text" placeholder="输入发货方名称" className="w-full bg-transparent text-sm text-slate-900 border-b border-slate-200 focus:border-blue-500 outline-none" />
-                  </div>
-
-                  <div className="hidden xl:flex items-center text-slate-300 text-lg">→</div>
-
-                  {logisticsCompanies.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <div className="w-full xl:w-[180px] rounded-xl border border-slate-300 bg-white px-4 py-3">
-                        <div className="text-[11px] font-bold text-slate-500 mb-2">物流公司{logisticsCompanies.length > 1 ? ` ${index + 1}` : ''}</div>
-                        <input
-                          type="text"
-                          placeholder="输入物流公司名称"
-                          value={item.name}
-                          onChange={(e) => updateLogisticsCompany(item.id, e.target.value)}
-                          className="w-full bg-transparent text-sm text-slate-900 border-b border-slate-200 focus:border-blue-500 outline-none"
-                        />
-                      </div>
-                      {index < logisticsCompanies.length - 1 && <div className="hidden xl:flex items-center text-slate-300 text-lg">→</div>}
-                    </React.Fragment>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={addLogisticsCompany}
-                    className="h-10 w-10 shrink-0 rounded-full border border-dashed border-slate-300 bg-white text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center"
-                    title="增加物流公司"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-
-                  <div className="hidden xl:flex items-center text-slate-300 text-lg">→</div>
-
-                  <div className="w-full xl:w-[180px] rounded-xl border border-slate-300 bg-white px-4 py-3">
-                    <div className="text-[11px] font-bold text-slate-500 mb-2">承运车辆</div>
-                    <input type="text" placeholder="输入车牌号/车队" className="w-full bg-transparent text-sm text-slate-900 border-b border-slate-200 focus:border-blue-500 outline-none" />
-                  </div>
-
+            <div className="p-6 space-y-4">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="w-full md:w-[220px]">
+                  <label className="block text-xs text-slate-600 mb-1">货主</label>
+                  <input
+                    type="text"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    placeholder="货主名称"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
                 </div>
-
-                <div className="text-xs text-slate-400">
-                  如存在多级物流转包，可点击“+”继续补充物流公司节点。
+                <span className="text-slate-400 pb-2">→</span>
+                {logisticsCompanies.map((item, index) => (
+                  <React.Fragment key={item.id}>
+                    <div className="w-full md:w-[220px]">
+                      <label className="block text-xs text-slate-600 mb-1">物流公司{logisticsCompanies.length > 1 ? ` ${index + 1}` : ''}</label>
+                      <input
+                        type="text"
+                        placeholder="物流公司"
+                        value={item.name}
+                        onChange={(e) => updateLogisticsCompany(item.id, e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                      />
+                    </div>
+                    {index < logisticsCompanies.length - 1 && <span className="text-slate-400 pb-2">→</span>}
+                  </React.Fragment>
+                ))}
+                <button
+                  type="button"
+                  onClick={addLogisticsCompany}
+                  className="h-9 w-9 mt-5 shrink-0 rounded-full border border-dashed border-slate-300 bg-white text-slate-500 hover:border-blue-400 hover:text-blue-600"
+                  title="可增加物流公司"
+                >
+                  <Plus className="w-4 h-4 mx-auto" />
+                </button>
+                <span className="text-slate-400 pb-2">→</span>
+                <div className="w-full md:w-[220px]">
+                  <label className="block text-xs text-slate-600 mb-1">承运车辆</label>
+                  <input
+                    type="text"
+                    value={truckPlateNo}
+                    onChange={(e) => setTruckPlateNo(e.target.value)}
+                    placeholder="车牌号"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => relationEvidenceInputRef.current?.click()}
+                  className="mt-5 px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                >
+                  上传佐证
+                </button>
+                <input
+                  ref={relationEvidenceInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(event) => appendEvidenceFiles(event, setRelationEvidenceFiles)}
+                />
               </div>
-              </div>
+              <div className="text-xs text-slate-500">已上传 {relationEvidenceFiles.length} 份承托关系材料</div>
+            </div>
           </section>
 
           {/* 4. 车辆信息 */}
@@ -642,23 +762,37 @@ export default function ClaimsAssistance({
               </h3>
             </div>
             
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">车牌号</label>
-                    <input type="text" placeholder="车牌号" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">驾驶员姓名</label>
-                    <input type="text" placeholder="驾驶员姓名" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">联系电话</label>
-                    <input type="text" placeholder="联系电话" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                  </div>
-
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">车辆车牌</label>
+                  <input
+                    type="text"
+                    value={truckPlateNo}
+                    onChange={(e) => setTruckPlateNo(e.target.value)}
+                    placeholder="例如：粤B12345"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
                 </div>
               </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => vehicleEvidenceInputRef.current?.click()}
+                  className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                >
+                  上传佐证
+                </button>
+                <input
+                  ref={vehicleEvidenceInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(event) => appendEvidenceFiles(event, setVehicleEvidenceFiles)}
+                />
+                <span className="text-xs text-slate-500">已上传 {vehicleEvidenceFiles.length} 份（行驶证、驾驶证等）</span>
+              </div>
+            </div>
           </section>
 
           {/* 5. 直接损失 */}
