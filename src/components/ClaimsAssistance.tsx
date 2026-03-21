@@ -317,206 +317,162 @@ export default function ClaimsAssistance({
   if (selectedClaim) {
     return (
       <div className="flex flex-col h-full relative flex-1">
-        {/* Compact Fixed Top Area (Basic Info) */}
-        <div ref={headerRef} className="sticky top-0 -mx-6 -mt-6 lg:-mx-8 lg:-mt-6 pt-6 px-6 lg:px-8 bg-slate-50 z-40 pb-3">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-3 flex items-center justify-between gap-6">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">理赔协助编号</div>
-                <div className="text-sm font-bold text-slate-900 truncate">{selectedClaim.assistNo || '--'}</div>
-              </div>
-            </div>
-
-            <div className="h-8 w-px bg-slate-200 hidden md:block"></div>
-
-            <div className="hidden md:grid grid-cols-4 gap-x-8 gap-y-1 flex-1">
-              <div>
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">保单号</div>
-                <div className="text-xs font-medium text-slate-900 truncate">{selectedClaim.policyNo}</div>
-              </div>
-              <div>
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">累计理赔/总保额</div>
-                <div className="text-xs font-bold text-slate-900">
-                  <span className="text-rose-600">¥62.5万</span> / <span className="text-slate-400">¥500万</span>
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">理赔案件总数</div>
-                <div className="text-xs font-bold text-slate-900">24 <span className="text-[10px] font-normal text-slate-400 ml-1">(已结 18)</span></div>
-              </div>
-              <div>
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">剩余保额占比</div>
-                <div className="text-xs font-bold text-emerald-600">87.5%</div>
-              </div>
-            </div>
-
-            <div className="h-8 w-px bg-slate-200 hidden lg:block"></div>
-
-            <div className="flex items-center gap-4 shrink-0">
-              <div className="text-right">
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">当前累计理赔</div>
-                <div className="text-sm font-bold text-rose-600">¥625,000.00</div>
-              </div>
-              <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden hidden xl:block">
-                <div className="h-full bg-rose-500 rounded-full" style={{ width: '12.5%' }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className={`flex gap-6 items-start flex-1 ${isLocked ? 'pointer-events-none' : ''}`}>
           {/* Main Content Area */}
           <div className="flex-1 space-y-6 pb-24">
-            {/* 案件处理进度 */}
-            <div className="bg-[#f5f3ff] rounded-2xl border border-purple-100 p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-800 mb-12">案件处理进度</h3>
-              <div className="relative flex justify-between items-center px-12">
-                {/* Connecting Line */}
-                <div className="absolute left-12 right-12 h-1 bg-blue-400 top-1/2 -translate-y-1/2"></div>
-                
-                {/* Steps */}
-                {[
-                  { title: '理赔申请', detail: '申请人：', name: '顺丰客户', statusKey: '理赔申请' },
-                  { title: '理赔审核', detail: '审核人：', name: '太平洋保险', statusKey: '理赔审核' },
-                  { title: '理赔通过', detail: '申请人：', name: '顺丰客户', statusKey: '理赔通过' },
-                  { title: '赔付通过', detail: '申请人：', name: '顺丰客户', statusKey: '赔付通过' },
-                ].map((step, index) => {
-                  const isActive = selectedClaim.status === step.statusKey;
-                  const isCompleted = ['理赔申请', '理赔审核', '理赔通过', '赔付通过'].indexOf(selectedClaim.status) > index;
-                  const isRed = selectedClaim.status === '理赔通过' && selectedClaim.isReturned && step.statusKey === '理赔通过';
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+              <div className="text-base font-semibold text-slate-900 mb-4">案件跟踪</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">公估</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedClaim.appraiserCompany || ''}
+                    placeholder="公估公司"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">联系方式</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedClaim.appraiserContact || ''}
+                    placeholder="联系人"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">电话</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedClaim.appraiserPhone || ''}
+                    placeholder="电话"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+                <div className="text-xs text-rose-600 flex items-end">理赔分公司正在协调中</div>
 
-                  return (
-                    <div key={index} className="relative flex flex-col items-center z-10">
-                      {/* Title above dot */}
-                      <div className={`absolute -top-8 whitespace-nowrap text-sm font-medium ${
-                        isActive || isCompleted ? 'text-blue-600' : 'text-slate-400'
-                      }`}>
-                        {step.title}
-                      </div>
-                      
-                      {/* Dot */}
-                      <div className={`w-5 h-5 rounded-full border-4 border-white shadow-sm transition-colors ${
-                        isRed ? 'bg-red-500' :
-                        isActive ? 'bg-blue-500 ring-4 ring-blue-500/20' : 
-                        isCompleted ? 'bg-blue-500' : 'bg-slate-200'
-                      }`}></div>
-                      
-                      {/* Detail below dot */}
-                      <div className="absolute top-8 whitespace-nowrap text-center text-xs text-slate-500 leading-tight">
-                        <div>{step.detail}</div>
-                        <div className="font-medium">{step.name}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="h-10"></div> {/* Spacer for the details below */}
-            </div>
-
-            {/* 最新审核意见 */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-500" />
-                  最新审核意见
-                </h4>
-                <button className="text-[10px] font-bold text-blue-600 hover:underline">历史记录</button>
-              </div>
-              <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100">
-                <p className="text-xs text-slate-700 leading-relaxed italic">
-                  {selectedClaim.latestReviewComment
-                    ? `"${selectedClaim.latestReviewComment}"`
-                    : '"暂无审核意见"'}
-                </p>
-                <div className="mt-2 text-[10px] text-slate-400 text-right">
-                  — 审核状态 {selectedClaim.status || '--'} {selectedClaim.updatedAt || ''}
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">理赔</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedClaim.claimDept || ''}
+                    placeholder="理赔部门"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">联系方式</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedClaim.claimContact || ''}
+                    placeholder="联系人"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">电话</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedClaim.claimPhone || ''}
+                    placeholder="电话"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
                 </div>
               </div>
-            </div>
 
-            {/* 1. 基础信息 */}
+              <div className="mt-4 flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-slate-600 mb-1">当前审核意见</label>
+                  <textarea
+                    rows={3}
+                    defaultValue={selectedClaim.latestReviewComment || ''}
+                    placeholder="暂无审核意见"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                  />
+                </div>
+                <button className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50">
+                  查看历史
+                </button>
+              </div>
+            </section>
+
             <section id="step-1" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-32">
-            <div className="w-full px-6 py-4 flex items-center justify-between bg-white">
-              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
-                <span className="w-1.5 h-6 rounded-full bg-blue-500"></span>
-                基础信息
-              </h3>
-            </div>
-            <div className="px-6 pb-6">
-              <div className="h-px bg-slate-200 mb-6"></div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-6 bg-slate-50/80 p-8 rounded-2xl border border-slate-100">
+              <div className="w-full px-6 py-4 bg-white border-b border-slate-200">
+                <h3 className="text-base font-semibold text-slate-900">保单信息</h3>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div>
-                    <div className="text-sm text-slate-500 mb-1">客户唯一编码</div>
-                    <div className="text-sm text-slate-900 font-medium">{selectedClaim.customerCode || '--'}</div>
+                    <label className="block text-xs text-slate-600 mb-1">保单号</label>
+                    <input type="text" value={selectedClaim.policyNo || ''} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
                   </div>
                   <div>
-                    <div className="text-sm text-slate-500 mb-1">保单号</div>
-                    <div className="text-sm text-slate-900 font-medium">{selectedClaim.policyNo}</div>
+                    <label className="block text-xs text-slate-600 mb-1">保险公司</label>
+                    <input type="text" value={selectedClaim.company || ''} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
                   </div>
                   <div>
-                    <div className="text-sm text-slate-500 mb-1">保险公司</div>
-                    <div className="text-sm text-slate-900 font-medium">{selectedClaim.company}</div>
+                    <label className="block text-xs text-slate-600 mb-1">险种</label>
+                    <input type="text" value={selectedClaim.type || ''} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
                   </div>
                   <div>
-                    <div className="text-sm text-slate-500 mb-1">险种</div>
-                    <div className="text-sm text-slate-900 font-medium">{selectedClaim.type}</div>
+                    <label className="block text-xs text-slate-600 mb-1">被保险人</label>
+                    <input type="text" value={selectedClaim.insured || ''} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
                   </div>
                   <div>
-                    <div className="text-sm text-slate-500 mb-1">被保险人</div>
-                    <div className="text-sm text-slate-900 font-medium">
-                      <div className="flex flex-col gap-1">
-                        {selectedClaim.insured.split(',').map((name: string, i: number) => (
-                          <span key={i}>{name.trim()}</span>
-                        ))}
-                      </div>
+                    <label className="block text-xs text-slate-600 mb-1">投保人</label>
+                    <input type="text" value={selectedClaim.applicant || selectedClaim.insured || ''} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">保险期限</label>
+                    <div className="flex items-center gap-2">
+                      <input type="text" value={selectedClaim.startTime || ''} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
+                      <span className="text-slate-400 text-xs">-</span>
+                      <input type="text" value={selectedClaim.endTime || ''} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-slate-500 mb-1">投保人</div>
-                    <div className="text-sm text-slate-900 font-medium">
-                      <div className="flex flex-col gap-1">
-                        {selectedClaim.insured.split(',').map((name: string, i: number) => (
-                          <span key={i}>{name.trim()}</span>
-                        ))}
-                      </div>
-                    </div>
+                    <label className="block text-xs text-slate-600 mb-1">营业收入</label>
+                    <input type="text" value={selectedClaim.businessIncome || '¥50,000,000.00'} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
                   </div>
                   <div>
-                    <div className="text-sm text-slate-500 mb-1">保险期限</div>
-                    <div className="text-sm text-slate-900 font-medium">{selectedClaim.startTime} 至 {selectedClaim.endTime}</div>
+                    <label className="block text-xs text-slate-600 mb-1">赔偿限额</label>
+                    <input type="text" value={selectedClaim.compLimit || '¥5,000,000.00'} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
                   </div>
-                  <div>
-                    <div className="text-sm text-slate-500 mb-1">赔偿限额</div>
-                    <div className="text-sm text-slate-900 font-medium">¥5,000,000.00</div>
+                  <div className="md:col-span-2 xl:col-span-4">
+                    <label className="block text-xs text-slate-600 mb-1">免赔条件</label>
+                    <textarea
+                      rows={2}
+                      value={selectedClaim.deductibleClause || '每次事故绝对免赔额为人民币5000元或损失金额的10%，两者以高者为准。'}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50"
+                    />
                   </div>
-                  <div>
-                    <div className="text-sm text-slate-500 mb-1">营业收入</div>
-                    <div className="text-sm text-slate-900 font-medium">¥50,000,000.00</div>
+                  <div className="md:col-span-2 xl:col-span-4">
+                    <label className="block text-xs text-slate-600 mb-1">特约条款</label>
+                    <textarea
+                      rows={2}
+                      value={selectedClaim.specialClause || '1. 扩展承保冷链运输风险；2. 扩展承保装卸过程中的意外损失。'}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50"
+                    />
                   </div>
-                  <div className="col-span-2 md:col-span-3 lg:col-span-4">
-                    <div className="text-sm text-slate-500 mb-1">免赔条件</div>
-                    <div className="text-sm text-slate-900">每次事故绝对免赔额为人民币5000元或损失金额的10%，两者以高者为准。</div>
-                  </div>
-                  <div className="col-span-2 md:col-span-3 lg:col-span-4">
-                    <div className="text-sm text-slate-500 mb-1">特约条款</div>
-                    <div className="text-sm text-slate-900 flex items-center gap-2">
-                      <span className="truncate max-w-2xl">1. 扩展承保冷链运输风险；2. 扩展承保装卸过程中的意外损失...</span>
-                    </div>
-                  </div>
-                  <div className="col-span-2 md:col-span-3 lg:col-span-4 flex justify-end gap-4 mt-4">
-                    <button className="px-6 py-2 text-xs font-bold text-blue-500 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all shadow-sm">
-                      查看保单
-                    </button>
-                    <button className="px-6 py-2 text-xs font-bold text-blue-500 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all shadow-sm">
-                      查看报案材料
-                    </button>
+                  <div className="md:col-span-2 xl:col-span-4">
+                    <label className="block text-xs text-slate-600 mb-1">批改信息</label>
+                    <textarea
+                      rows={2}
+                      value={selectedClaim.endorsement || ''}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50"
+                    />
                   </div>
                 </div>
+                <div className="mt-4 flex justify-end gap-3">
+                  <button className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50">查看保单</button>
+                  <button className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50">查看报案材料</button>
+                </div>
               </div>
-          </section>
+            </section>
 
           {/* 2. 报案信息 */}
           <section id="step-2" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-32">
