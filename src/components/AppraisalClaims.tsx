@@ -54,6 +54,8 @@ export default function AppraisalClaims({
   const [insurerAuditRows, setInsurerAuditRows] = useState([
     { id: 1, date: '', opinion: '', note: '' },
   ]);
+  const [reportPreview, setReportPreview] = useState('');
+  const [insurerActionMessage, setInsurerActionMessage] = useState('');
   const surveyEvidenceInputRef = React.useRef<HTMLInputElement>(null);
   const surveySummaryEvidenceInputRef = React.useRef<HTMLInputElement>(null);
   const stageConfig =
@@ -165,6 +167,44 @@ export default function AppraisalClaims({
     setInsurerAuditRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
+  const getToday = () => new Date().toISOString().slice(0, 10);
+
+  const buildInsurerReport = () => {
+    const header = [
+      '理赔审核报告',
+      `案件编号：${selectedCase?.id || '--'}`,
+      `保单号：${selectedCase?.policyNo || '--'}`,
+      `被保险人：${selectedCase?.insured || '--'}`,
+      `审核日期：${getToday()}`,
+      '',
+      `保险公司认定意见：${insurerOpinion || '--'}`,
+      '',
+      '审核记录：',
+    ];
+
+    const rowLines = insurerAuditRows.map((row, idx) => {
+      return `${idx + 1}. 日期:${row.date || '--'} | 审核意见:${row.opinion || '--'} | 备注:${row.note || '--'}`;
+    });
+
+    return [...header, ...rowLines, '', `最终结论：${selectedCase?.reviewDecision === 'reject' ? '退回' : '同意'}`, `审核意见：${reviewComment || '--'}`].join('\n');
+  };
+
+  const handleGenerateInsurerReport = () => {
+    const content = buildInsurerReport();
+    setReportPreview(content);
+    setInsurerActionMessage('已生成报告预览。');
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `理赔审核报告_${selectedCase?.id || '未命名'}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     if (initialSelectedCase) {
       setSelectedCase(initialSelectedCase);
@@ -256,8 +296,16 @@ export default function AppraisalClaims({
                                 type="button"
                                 disabled={!isReviewEditable}
                                 onClick={() => {
+                                  if (!row.opinion.trim()) {
+                                    setInsurerActionMessage('请先填写审核意见后再操作同意。');
+                                    return;
+                                  }
                                   setSelectedCase({ ...selectedCase, reviewDecision: 'approve' });
                                   setReviewComment(row.opinion || reviewComment);
+                                  if (!row.date) {
+                                    updateInsurerAuditRow(row.id, 'date', getToday());
+                                  }
+                                  setInsurerActionMessage('已选择同意，等待确认提交。');
                                   setShowReviewConfirm(true);
                                 }}
                                 className="px-2 py-1 text-xs border border-emerald-300 text-emerald-700 rounded hover:bg-emerald-50 disabled:opacity-50"
@@ -268,8 +316,16 @@ export default function AppraisalClaims({
                                 type="button"
                                 disabled={!isReviewEditable}
                                 onClick={() => {
+                                  if (!row.opinion.trim()) {
+                                    setInsurerActionMessage('请先填写审核意见后再操作退回。');
+                                    return;
+                                  }
                                   setSelectedCase({ ...selectedCase, reviewDecision: 'reject' });
                                   setReviewComment(row.opinion || reviewComment);
+                                  if (!row.date) {
+                                    updateInsurerAuditRow(row.id, 'date', getToday());
+                                  }
+                                  setInsurerActionMessage('已选择退回，等待确认提交。');
                                   setShowReviewConfirm(true);
                                 }}
                                 className="px-2 py-1 text-xs border border-rose-300 text-rose-700 rounded hover:bg-rose-50 disabled:opacity-50"
@@ -286,8 +342,15 @@ export default function AppraisalClaims({
               </div>
             </section>
 
+            {insurerActionMessage ? (
+              <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-xs text-blue-700">
+                {insurerActionMessage}
+              </div>
+            ) : null}
+
             <button
               type="button"
+              onClick={handleGenerateInsurerReport}
               disabled={!isReviewEditable}
               className="px-6 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
@@ -296,7 +359,13 @@ export default function AppraisalClaims({
           </div>
 
           <aside className="rounded-xl border border-rose-300 bg-white p-4 text-sm text-slate-600 min-h-[220px]">
-            理赔员请填写完整案件报告
+            <div className="text-xs text-slate-500 mb-2">理赔员请填写完整案件报告</div>
+            <textarea
+              value={reportPreview}
+              readOnly
+              placeholder="点击“一键生成理赔报告”后在此展示报告预览"
+              className="h-[260px] w-full resize-none rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700"
+            />
           </aside>
         </div>
 
@@ -320,6 +389,7 @@ export default function AppraisalClaims({
                       reviewDecision: selectedCase.reviewDecision,
                       reviewComment,
                     }, reviewStage);
+                    setInsurerActionMessage('审核结果已提交。');
                     setShowReviewConfirm(false);
                     setSelectedCase(null);
                   }}
