@@ -34,6 +34,21 @@ export default function AppraisalClaims({
     reportDateFrom: '',
     reportDateTo: '',
   });
+  const [surveyRows, setSurveyRows] = useState([
+    { id: 1, itemName: '', quantity: '', packageType: '', unitPrice: '', lossDesc: '', voucher: '' },
+  ]);
+  const [claimRows] = useState([
+    { id: 1, itemName: '电子设备', quantity: '50', packageType: '纸箱', unitPrice: '1000', claimAmount: '50000', claimType: '报废', appraisalOpinion: '同意按报废核损' },
+  ]);
+  const [surveySummary, setSurveySummary] = useState('');
+  const [surveyPeriod, setSurveyPeriod] = useState('');
+  const [surveyInitiator, setSurveyInitiator] = useState('');
+  const [surveyContact, setSurveyContact] = useState('');
+  const [surveyLocation, setSurveyLocation] = useState('');
+  const [surveyEvidenceCount, setSurveyEvidenceCount] = useState(0);
+  const [surveySummaryEvidenceCount, setSurveySummaryEvidenceCount] = useState(0);
+  const surveyEvidenceInputRef = React.useRef<HTMLInputElement>(null);
+  const surveySummaryEvidenceInputRef = React.useRef<HTMLInputElement>(null);
   const stageConfig =
     reviewStage === 'insurer'
       ? {
@@ -115,6 +130,22 @@ export default function AppraisalClaims({
     return 'bg-slate-100 text-slate-700';
   };
 
+  const addSurveyRow = () => {
+    setSurveyRows((prev) => [...prev, { id: Date.now(), itemName: '', quantity: '', packageType: '', unitPrice: '', lossDesc: '', voucher: '' }]);
+  };
+
+  const updateSurveyRow = (id: number, field: string, value: string) => {
+    setSurveyRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+  };
+
+  const appendSurveyEvidence = (event: React.ChangeEvent<HTMLInputElement>, setCount: React.Dispatch<React.SetStateAction<number>>) => {
+    const count = event.target.files?.length || 0;
+    if (count > 0) {
+      setCount((prev) => prev + count);
+    }
+    event.target.value = '';
+  };
+
   useEffect(() => {
     if (initialSelectedCase) {
       setSelectedCase(initialSelectedCase);
@@ -174,449 +205,230 @@ export default function AppraisalClaims({
 
         {/* Content */}
         <div className="flex-1 space-y-6 pb-24 mt-4">
-          <div className="bg-[#f5f3ff] rounded-2xl border border-purple-100 p-4 shadow-sm mb-6 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-purple-600" />
-            <span className="text-sm text-purple-900 font-medium">{stageConfig.introText}</span>
-          </div>
-
-          {selectedCase.status === stageConfig.rejectedStatus && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-              {stageConfig.rejectedHint}
-            </div>
-          )}
-
-          {/* 1. 基础信息 (Read-only) */}
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-blue-500"></span>
-                基础信息
-              </h3>
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">查勘分</h3>
+              <button
+                type="button"
+                onClick={addSurveyRow}
+                disabled={!isReviewEditable}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <Plus className="w-3.5 h-3.5" /> 添加查勘
+              </button>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 bg-slate-50/80 p-6 rounded-xl border border-slate-100">
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">客户唯一编码</div>
-                  <div className="text-sm text-slate-900 font-bold">{selectedCase.customerCode || '--'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">保单号</div>
-                  <div className="text-sm text-slate-900 font-bold">{selectedCase.policyNo}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">保险公司</div>
-                  <div className="text-sm text-slate-900 font-bold">{selectedCase.company}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">险种</div>
-                  <div className="text-sm text-slate-900 font-bold">{selectedCase.type}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">被保险人 / 投保人</div>
-                  <div className="text-sm text-slate-900 font-bold">{selectedCase.insured}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">保险期限</div>
-                  <div className="text-sm text-slate-900 font-bold">{selectedCase.startTime} 至 {selectedCase.endTime}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">赔偿限额</div>
-                  <div className="text-sm text-slate-900 font-bold">¥5,000,000.00</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">免赔条件</div>
-                  <div className="text-sm text-slate-900 font-bold">每次事故绝对免赔额为人民币5000元或损失金额的10%</div>
-                </div>
-                <div className="md:col-span-4">
-                  <div className="text-xs text-slate-500 mb-1 font-bold">特约条款</div>
-                  <div className="text-sm text-slate-900 font-bold">1. 扩展承保冷链运输风险；2. 扩展承保装卸过程中的意外损失...</div>
-                </div>
-              </div>
-            </div>
-          </section>
 
-          {/* 2. 事故信息 (Read-only) */}
-          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-blue-500"></span>
-                事故信息
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">出险时间</div>
-                  <div className="text-sm text-slate-900 font-bold">2026-03-12 14:30</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">报案时间</div>
-                  <div className="text-sm text-slate-900 font-bold">{selectedCase.reportTime}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">报案号 (保司)</div>
-                  <div className="text-sm text-slate-900 font-bold">RPT-20260312-001</div>
-                </div>
-                <div className="md:col-span-1">
-                  <div className="text-xs text-slate-500 mb-1 font-bold">出险地点</div>
-                  <div className="text-sm text-slate-900 font-bold">湖南省长沙市长沙县某高速路段</div>
-                </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs text-slate-500 mb-1 font-bold">事故原因</div>
-                  <div className="text-sm text-slate-900 font-bold">交通事故 - 追尾</div>
-                </div>
-                <div className="md:col-span-3">
-                  <div className="text-xs text-slate-500 mb-1 font-bold">事故情况说明</div>
-                  <div className="text-sm text-slate-900 font-bold">车辆在高速行驶过程中，因前方车辆紧急刹车，导致本车追尾，造成车上货物受损。现场无人员伤亡。</div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* 3. 承托关系 (Read-only) */}
-          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-blue-500"></span>
-                承托关系
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-50/50 p-4 rounded-lg border border-slate-100 mb-6">
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">发货人</div>
-                  <div className="text-sm text-slate-900 font-bold">深圳某电子厂</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">物流公司 (一级)</div>
-                  <div className="text-sm text-slate-900 font-bold">信丰物流</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">实际承运人</div>
-                  <div className="text-sm text-slate-900 font-bold">张师傅车队</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">承托关系凭证</div>
-                  <div className="text-sm text-blue-600 font-bold cursor-pointer hover:underline flex items-center gap-1">
-                    <FileText className="w-4 h-4" /> 查看运单/合同
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">启运地</div>
-                  <div className="text-sm text-slate-900 font-bold">广东省深圳市</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">目的地</div>
-                  <div className="text-sm text-slate-900 font-bold">北京市朝阳区</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mt-4 text-sm font-bold text-slate-700">
-                <Building2 className="w-4 h-4 text-blue-500" />
-                车辆信息
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-50/50 p-4 rounded-lg border border-slate-100 mt-2">
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">车牌号</div>
-                  <div className="text-sm text-slate-900 font-bold">粤B·12345</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">驾驶员姓名</div>
-                  <div className="text-sm text-slate-900 font-bold">王大明</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">联系电话</div>
-                  <div className="text-sm text-slate-900 font-bold">138****0000</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold">车辆资料</div>
-                  <div className="text-sm text-blue-600 font-bold cursor-pointer hover:underline flex items-center gap-1">
-                    <FileText className="w-4 h-4" /> 查看证件
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* 4. 损失情况 (Read-only) */}
-          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-blue-500"></span>
-                损失情况
-              </h3>
-            </div>
-            <div className="p-6 space-y-6">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-3">受损货物清单 (直接损失)</h4>
-                <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                  <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                        <th className="px-4 py-2 w-16">序号</th>
-                        <th className="px-4 py-2">品名</th>
-                        <th className="px-4 py-2 w-24">数量</th>
-                        <th className="px-4 py-2 w-32">包装</th>
-                        <th className="px-4 py-2 w-32">单价</th>
-                        <th className="px-4 py-2 w-40">损失类型</th>
-                        <th className="px-4 py-2 w-32 text-right">损失金额</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      <tr>
-                        <td className="px-4 py-2 text-slate-500">1</td>
-                        <td className="px-4 py-2 font-medium">某品牌电子设备机箱</td>
-                        <td className="px-4 py-2">50</td>
-                        <td className="px-4 py-2">纸箱</td>
-                        <td className="px-4 py-2">¥1,000.00</td>
-                        <td className="px-4 py-2">报废</td>
-                        <td className="px-4 py-2 text-right font-medium text-rose-600">¥50,000.00</td>
-                      </tr>
-                    </tbody>
-                    <tfoot>
-                      <tr className="bg-slate-50 border-t border-slate-200 font-bold text-slate-900">
-                        <td colSpan={6} className="px-4 py-2 text-right">直接损失合计:</td>
-                        <td className="px-4 py-2 text-right text-rose-600">¥50,000.00</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <div className="text-sm text-blue-600 font-bold cursor-pointer hover:underline flex items-center gap-1">
-                    <FileText className="w-4 h-4" /> 查看货物损失凭证
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-3">间接损失</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-4 rounded-lg border border-slate-100">
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1 font-bold">人工费用</div>
-                    <div className="text-sm text-slate-900 font-bold">¥1,200.00</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1 font-bold">额外运费</div>
-                    <div className="text-sm text-slate-900 font-bold">¥800.00</div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-slate-500 mb-1 font-bold">费用说明</div>
-                    <div className="text-sm text-slate-900 font-bold">事故现场的残骸清理及转运。</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* 5. 现场照片 (Read-only) */}
-          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-blue-500"></span>
-                现场照片
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="aspect-video bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden group relative">
-                    <img 
-                      src={`https://picsum.photos/seed/accident${i}/400/300`} 
-                      alt={`现场照片 ${i}`}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button className="text-white text-xs font-bold bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full border border-white/30">查看大图</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* 6. 公估理算录入 (Editable) */}
-          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-blue-500"></span>
-                公估理算录入
-              </h3>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700">公估公司</label>
-                  <input type="text" className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-500 outline-none" value="泛华公估" readOnly />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700">公估师</label>
-                  <input type="text" className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-500 outline-none" value="张三" readOnly />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700">联系电话</label>
-                  <input type="text" className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-500 outline-none" value="13800138000" readOnly />
-                </div>
-              </div>
-
-              <div className="bg-blue-50/50 rounded-xl border border-blue-100 p-5 space-y-4">
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Calculator className="w-4 h-4 text-blue-500" />
-                  理算金额核定
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">损失金额 (A)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">¥</span>
-                      <input 
-                        type="number" 
-                        className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500/20 outline-none disabled:bg-slate-50 disabled:text-slate-400" 
-                        defaultValue="50000.00" 
-                        max={5000000}
-                        disabled={!isReviewEditable}
-                        onBlur={(e) => {
-                          if (parseFloat(e.target.value) > 5000000) {
-                            e.target.value = "5000000.00";
-                            alert("理算金额不能超过保单限额 ¥5,000,000.00");
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">免赔额/率 (B)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">¥</span>
-                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white disabled:bg-slate-50 disabled:text-slate-400" defaultValue="500.00" disabled={!isReviewEditable} />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">残值扣除 (C)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">¥</span>
-                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-slate-300 rounded-md bg-white disabled:bg-slate-50 disabled:text-slate-400" defaultValue="0.00" disabled={!isReviewEditable} />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">赔付金额 (A-B-C)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 text-xs font-bold">¥</span>
-                      <input type="number" className="w-full pl-7 pr-3 py-2 text-sm font-bold border border-blue-200 rounded-md bg-blue-50 text-blue-700" value="49500.00" readOnly />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700">公估报告及附件</label>
-                  <button className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline disabled:text-slate-400 disabled:no-underline" disabled={!isReviewEditable}>
-                    <Plus className="w-3 h-3" />
-                    添加附件
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg group">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <FileText className="w-4 h-4 text-blue-500 shrink-0" />
-                      <span className="text-[10px] text-slate-600 truncate">初步公估报告.pdf</span>
-                    </div>
-                    <button className="text-slate-400 hover:text-rose-500 transition-colors">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* 7. 理算审核 */}
-          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-emerald-500"></span>
-                理算审核
-              </h3>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700">审核意见历史</label>
-                  <button className="text-[10px] font-bold text-blue-600 hover:underline">导出审核记录</button>
-                </div>
-                <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                  <table className="w-full text-left border-collapse whitespace-nowrap text-[10px]">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                        <th className="px-3 py-2">日期</th>
-                        <th className="px-3 py-2">审核意见</th>
-                        <th className="px-3 py-2">备注记录</th>
-                        <th className="px-3 py-2 text-center">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      <tr>
-                        <td className="px-3 py-2 text-slate-500">2026-03-13</td>
-                        <td className="px-3 py-2">
-                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 font-bold">同意赔付</span>
-                        </td>
-                        <td className="px-3 py-2 text-slate-600">资料齐全，核定金额无误。</td>
-                        <td className="px-3 py-2 text-center">
-                          <button className="text-blue-600 font-bold hover:underline">详情</button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-4">
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  {reviewStage === 'insurer' ? '保司审核操作' : '理算审核操作'}
-                </h4>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700">审核结论</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input 
-                      type="radio" 
-                      name="audit_result" 
-                      className="w-4 h-4 text-blue-600 focus:ring-blue-500" 
-                      checked={selectedCase.reviewDecision === 'approve'}
-                      disabled={!isReviewEditable}
-                      onChange={() => setSelectedCase({ ...selectedCase, reviewDecision: 'approve' })}
-                    />
-                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{stageConfig.approveLabel}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input 
-                      type="radio" 
-                      name="audit_result" 
-                      className="w-4 h-4 text-blue-600 focus:ring-blue-500" 
-                      checked={selectedCase.reviewDecision === 'reject'}
-                      disabled={!isReviewEditable}
-                      onChange={() => setSelectedCase({ ...selectedCase, reviewDecision: 'reject' })}
-                    />
-                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{stageConfig.rejectLabel}</span>
-                  </label>
-                </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700">审核意见</label>
-                  <textarea
-                    rows={3}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500/20 outline-none"
-                    placeholder="请详细输入审核意见..."
-                    value={reviewComment}
+                  <label className="block text-xs text-slate-600 mb-1">查勘日期</label>
+                  <input
+                    type="text"
+                    value={surveyPeriod}
+                    onChange={(e) => setSurveyPeriod(e.target.value)}
+                    placeholder="例如 2026-03-20"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
                     disabled={!isReviewEditable}
-                    onChange={(e) => setReviewComment(e.target.value)}
-                  ></textarea>
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">现场查勘人</label>
+                  <input
+                    type="text"
+                    value={surveyInitiator}
+                    onChange={(e) => setSurveyInitiator(e.target.value)}
+                    placeholder="姓名"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                    disabled={!isReviewEditable}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1">联系方式</label>
+                  <input
+                    type="text"
+                    value={surveyContact}
+                    onChange={(e) => setSurveyContact(e.target.value)}
+                    placeholder="手机号"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                    disabled={!isReviewEditable}
+                  />
+                </div>
+                <div className="md:col-span-2 xl:col-span-2">
+                  <label className="block text-xs text-slate-600 mb-1">查勘地点</label>
+                  <input
+                    type="text"
+                    value={surveyLocation}
+                    onChange={(e) => setSurveyLocation(e.target.value)}
+                    placeholder="详细地点"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                    disabled={!isReviewEditable}
+                  />
                 </div>
               </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                      <th className="px-4 py-2 w-14">序号</th>
+                      <th className="px-4 py-2">品名</th>
+                      <th className="px-4 py-2 w-24">数量</th>
+                      <th className="px-4 py-2 w-32">包装</th>
+                      <th className="px-4 py-2 w-32">货损状态说明</th>
+                      <th className="px-4 py-2 w-28">佐证</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {surveyRows.map((row, index) => (
+                      <tr key={row.id}>
+                        <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                        <td className="px-4 py-2">
+                          <input value={row.itemName} onChange={(e) => updateSurveyRow(row.id, 'itemName', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input value={row.quantity} onChange={(e) => updateSurveyRow(row.id, 'quantity', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input value={row.packageType} onChange={(e) => updateSurveyRow(row.id, 'packageType', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input value={row.lossDesc} onChange={(e) => updateSurveyRow(row.id, 'lossDesc', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input value={row.voucher} onChange={(e) => updateSurveyRow(row.id, 'voucher', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="文件名" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-slate-600 mb-1">查勘已况</label>
+                  <textarea
+                    rows={4}
+                    value={surveySummary}
+                    onChange={(e) => setSurveySummary(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                    disabled={!isReviewEditable}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => surveySummaryEvidenceInputRef.current?.click()}
+                  disabled={!isReviewEditable}
+                  className="px-4 py-2 text-sm border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  上传勘办笔录
+                </button>
+                <input
+                  ref={surveySummaryEvidenceInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => appendSurveyEvidence(e, setSurveySummaryEvidenceCount)}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-4 text-xs text-slate-500">
+                <button
+                  type="button"
+                  onClick={() => surveyEvidenceInputRef.current?.click()}
+                  disabled={!isReviewEditable}
+                  className="px-3 py-1.5 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  图片上传
+                </button>
+                <input
+                  ref={surveyEvidenceInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => appendSurveyEvidence(e, setSurveyEvidenceCount)}
+                />
+                <span>图片 {surveyEvidenceCount} 份</span>
+                <span>勘办笔录 {surveySummaryEvidenceCount} 份</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-slate-900">理赔分</h3>
+              <span className="text-xs text-slate-500">仅供查看保单得失和理赔录入信息</span>
+            </div>
+            <div className="p-6">
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                      <th className="px-4 py-2 w-14">序号</th>
+                      <th className="px-4 py-2">品名</th>
+                      <th className="px-4 py-2 w-20">数量</th>
+                      <th className="px-4 py-2 w-20">包装</th>
+                      <th className="px-4 py-2 w-24">单价</th>
+                      <th className="px-4 py-2 w-28">报损金额</th>
+                      <th className="px-4 py-2 w-28">报损类型</th>
+                      <th className="px-4 py-2">核定意见</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {claimRows.map((row) => (
+                      <tr key={row.id}>
+                        <td className="px-4 py-2 text-slate-500">{row.id}</td>
+                        <td className="px-4 py-2 text-slate-800">{row.itemName}</td>
+                        <td className="px-4 py-2 text-slate-700">{row.quantity}</td>
+                        <td className="px-4 py-2 text-slate-700">{row.packageType}</td>
+                        <td className="px-4 py-2 text-slate-700">{row.unitPrice}</td>
+                        <td className="px-4 py-2 text-rose-600">{row.claimAmount}</td>
+                        <td className="px-4 py-2 text-slate-700">{row.claimType}</td>
+                        <td className="px-4 py-2 text-slate-700">{row.appraisalOpinion}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-lg font-semibold text-slate-900">审核处理</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="audit_result"
+                    className="w-4 h-4 text-blue-600"
+                    checked={selectedCase.reviewDecision === 'approve'}
+                    disabled={!isReviewEditable}
+                    onChange={() => setSelectedCase({ ...selectedCase, reviewDecision: 'approve' })}
+                  />
+                  <span className="text-sm">{stageConfig.approveLabel}</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="audit_result"
+                    className="w-4 h-4 text-blue-600"
+                    checked={selectedCase.reviewDecision === 'reject'}
+                    disabled={!isReviewEditable}
+                    onChange={() => setSelectedCase({ ...selectedCase, reviewDecision: 'reject' })}
+                  />
+                  <span className="text-sm">{stageConfig.rejectLabel}</span>
+                </label>
+              </div>
+              <textarea
+                rows={3}
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                disabled={!isReviewEditable}
+                placeholder="审核意见"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+              />
             </div>
           </section>
         </div>
