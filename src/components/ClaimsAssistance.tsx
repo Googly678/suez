@@ -101,6 +101,23 @@ export default function ClaimsAssistance({
       });
     }
   }, [selectedOrder]);
+
+  // 当 claimAssistPool 更新时，同步 selectedClaim 的状态
+  useEffect(() => {
+    if (selectedClaim && claimAssistPool) {
+      const updated = claimAssistPool.find(
+        (item) => item.assistNo === selectedClaim.assistNo || item.id === selectedClaim.id
+      );
+      if (updated) {
+        setSelectedClaim((prev: any) => ({
+          ...prev,
+          status: updated.status,
+          latestReviewComment: updated.latestReviewComment,
+          updatedAt: updated.updatedAt,
+        }));
+      }
+    }
+  }, [claimAssistPool]);
   const displayClaimsData = [
     ...(claimAssistPool || []).map((row) => ({
       ...row,
