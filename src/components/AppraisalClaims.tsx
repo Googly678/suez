@@ -245,6 +245,137 @@ export default function AppraisalClaims({
 
             <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-semibold text-slate-900">保单信息汇总（只读）</h3>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">保单号</div>
+                  <div className="font-medium text-slate-900">{selectedCase.policyNo || '--'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">被保险人</div>
+                  <div className="font-medium text-slate-900">{selectedCase.insured || '--'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">保险公司</div>
+                  <div className="font-medium text-slate-900">{selectedCase.company || '--'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">险种</div>
+                  <div className="font-medium text-slate-900">{selectedCase.type || '--'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">报案时间</div>
+                  <div className="font-medium text-slate-900">{selectedCase.reportTime || '--'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">当前状态</div>
+                  <div className="font-medium text-slate-900">{selectedCase.status || '--'}</div>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900">理赔录入信息汇总（只读）</h3>
+                <div className="text-xs text-slate-500">
+                  报损总额：
+                  {claimRows
+                    .reduce((sum, row) => sum + (Number(row.claimAmount) || 0), 0)
+                    .toLocaleString('zh-CN')}
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                        <th className="px-4 py-2 w-14">序号</th>
+                        <th className="px-4 py-2">品名</th>
+                        <th className="px-4 py-2 w-20">数量</th>
+                        <th className="px-4 py-2 w-20">包装</th>
+                        <th className="px-4 py-2 w-24">单价</th>
+                        <th className="px-4 py-2 w-28">报损金额</th>
+                        <th className="px-4 py-2 w-28">报损类型</th>
+                        <th className="px-4 py-2">核定意见</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {claimRows.map((row) => (
+                        <tr key={row.id}>
+                          <td className="px-4 py-2 text-slate-500">{row.id}</td>
+                          <td className="px-4 py-2 text-slate-800">{row.itemName}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.quantity}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.packageType}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.unitPrice}</td>
+                          <td className="px-4 py-2 text-rose-600">{row.claimAmount}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.claimType}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.appraisalOpinion}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-semibold text-slate-900">公估录入信息汇总（只读）</h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">查勘日期</div>
+                    <div className="font-medium text-slate-900">{surveyPeriod || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">现场查勘人</div>
+                    <div className="font-medium text-slate-900">{surveyInitiator || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">联系方式</div>
+                    <div className="font-medium text-slate-900">{surveyContact || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">查勘地点</div>
+                    <div className="font-medium text-slate-900">{surveyLocation || '--'}</div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                        <th className="px-4 py-2 w-14">序号</th>
+                        <th className="px-4 py-2">品名</th>
+                        <th className="px-4 py-2 w-24">数量</th>
+                        <th className="px-4 py-2 w-32">包装</th>
+                        <th className="px-4 py-2 w-40">货损状态说明</th>
+                        <th className="px-4 py-2 w-28">佐证</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {surveyRows.map((row, index) => (
+                        <tr key={row.id}>
+                          <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                          <td className="px-4 py-2 text-slate-800">{row.itemName || '--'}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.packageType || '--'}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.lossDesc || '--'}</td>
+                          <td className="px-4 py-2 text-slate-700">{row.voucher || '--'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="text-xs text-slate-500">
+                  查勘已况：{surveySummary || '--'}
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                 <h3 className="text-lg font-semibold text-slate-900">审核意见</h3>
               </div>
               <div className="p-6">
