@@ -430,7 +430,7 @@ export default function App() {
 
   const [activeItem, setActiveItem] = useState('我的保单');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [expandedGroup, setExpandedGroup] = useState('理赔工作台');
+  const [expandedGroup, setExpandedGroup] = useState('保单管理');
   const [resetKey, setResetKey] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);

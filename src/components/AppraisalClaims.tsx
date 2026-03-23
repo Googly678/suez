@@ -45,6 +45,7 @@ export default function AppraisalClaims({
       summary: '',
       imageCount: 0,
       notebookCount: 0,
+      images: [] as Array<{ id: string; name: string; dataUrl: string }>,
     },
   ]);
   const [claimRows] = useState([
@@ -154,6 +155,7 @@ export default function AppraisalClaims({
     summary: '',
     imageCount: 0,
     notebookCount: 0,
+    images: [] as Array<{ id: string; name: string; dataUrl: string }>,
   });
 
   const addSurveyBlock = () => {
@@ -236,6 +238,190 @@ export default function AppraisalClaims({
     URL.revokeObjectURL(url);
   };
 
+  const buildAppraisalReportHtml = () => {
+    const today = getToday();
+
+    // 从 AttachmentManager localStorage 读取附件（以 assistNo 为键）
+    const assistNo: string = selectedCase?.assistNo || selectedCase?.id || '';
+    let storageAttachments: Record<string, Array<{ id: string; name: string; type: string; dataUrl: string; uploadedAt: string }>> = {};
+    if (assistNo) {
+      try {
+        const raw = localStorage.getItem(`claim_attachments_${assistNo}`);
+        if (raw) storageAttachments = JSON.parse(raw);
+      } catch {
+        storageAttachments = {};
+      }
+    }
+    const attachmentFolders = ['个人身份证明', '车辆证明', '发票', '损失证明', '其他'] as const;
+    const hasStorageImages = attachmentFolders.some((f) => (storageAttachments[f] || []).some((a) => a.type?.startsWith('image/')));
+
+    const escHtml = (str: string) => String(str || '--').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const surveyBlocksHtml = surveyBlocks.map((block, blockIdx) => {
+      const rowsHtml = block.rows.filter((r) => r.itemName).map((row, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${escHtml(row.itemName)}</td>
+          <td>${escHtml(row.quantity)}</td>
+          <td>${escHtml(row.packageType)}</td>
+          <td>${escHtml(row.lossDesc)}</td>
+          <td>${escHtml(row.voucher)}</td>
+        </tr>`).join('');
+      const noRows = block.rows.every((r) => !r.itemName);
+
+      const imagesHtml = (block.images || []).length > 0
+        ? `<div class="img-grid">${(block.images || []).map((img) => `
+            <figure>
+              <img src="${img.dataUrl}" alt="${escHtml(img.name)}" />
+              <figcaption>${escHtml(img.name)}</figcaption>
+            </figure>`).join('')}</div>`
+        : '';
+
+      return `
+        <div class="block">
+          <div class="block-title">查勘记录 #${blockIdx + 1}</div>
+          <table class="info-table">
+            <tr><th>查勘日期</th><td>${escHtml(block.period)}</td><th>现场查勘人</th><td>${escHtml(block.initiator)}</td></tr>
+            <tr><th>联系方式</th><td>${escHtml(block.contact)}</td><th>查勘地点</th><td colspan="3">${escHtml(block.location)}</td></tr>
+          </table>
+          <div class="sub-title">货损明细</div>
+          ${noRows ? '<p class="empty">暂无明细</p>' : `
+          <table class="data-table">
+            <thead><tr><th>序号</th><th>品名</th><th>数量</th><th>包装</th><th>货损状态说明</th><th>佐证</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>`}
+          ${block.summary ? `<div class="summary"><span>查勘已况：</span>${escHtml(block.summary)}</div>` : ''}
+          ${imagesHtml ? `<div class="sub-title">现场图片</div>${imagesHtml}` : ''}
+          <p class="stats">图片 ${block.imageCount} 份 &nbsp;|&nbsp; 勘办笔录 ${block.notebookCount} 份</p>
+        </div>`;
+    }).join('');
+
+    const claimRowsHtml = claimRows.map((row, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${escHtml(row.itemName)}</td>
+        <td>${escHtml(row.quantity)}</td>
+        <td>${escHtml(row.packageType)}</td>
+        <td>${escHtml(row.unitPrice)}</td>
+        <td class="amount">${escHtml(row.claimAmount)}</td>
+        <td>${escHtml(row.claimType)}</td>
+        <td>${escHtml(row.appraisalOpinion)}</td>
+      </tr>`).join('');
+
+    const guideRowsHtml = guideRows.filter((r) => r.date || r.feedback).map((row, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${escHtml(row.date)}</td>
+        <td>${escHtml(row.feedback)}</td>
+        <td>${escHtml(row.note)}</td>
+      </tr>`).join('');
+
+    const attachmentsSection = hasStorageImages ? `
+      <section>
+        <h2>理赔附件（附件管理器图片）</h2>
+        ${attachmentFolders.map((folder) => {
+          const imgs = (storageAttachments[folder] || []).filter((a) => a.type?.startsWith('image/'));
+          if (!imgs.length) return '';
+          return `
+            <div class="block">
+              <div class="block-title">${escHtml(folder)}</div>
+              <div class="img-grid">${imgs.map((img) => `
+                <figure>
+                  <img src="${img.dataUrl}" alt="${escHtml(img.name)}" />
+                  <figcaption>${escHtml(img.name)}<br/><span style="font-size:10px;color:#888">${escHtml(img.uploadedAt)}</span></figcaption>
+                </figure>`).join('')}
+              </div>
+            </div>`;
+        }).join('')}
+      </section>` : '';
+
+    const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<title>公估理赔报告 · ${escHtml(selectedCase?.id || '未命名')}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"SimSun","Noto Serif SC","Times New Roman",serif;font-size:13px;color:#1a1a1a;background:#fff;padding:30px 40px}
+  @media print{body{padding:0}}
+  .report-header{text-align:center;padding-bottom:20px;border-bottom:2px solid #1a4fa8;margin-bottom:24px}
+  .report-header h1{font-size:22px;letter-spacing:6px;color:#1a4fa8;margin-bottom:6px}
+  .report-header .meta{font-size:12px;color:#555;letter-spacing:1px}
+  h2{font-size:14px;font-weight:bold;color:#1a4fa8;border-left:4px solid #1a4fa8;padding-left:8px;margin:20px 0 10px}
+  .block{border:1px solid #dde3ef;border-radius:6px;padding:14px;margin-bottom:14px}
+  .block-title{font-size:13px;font-weight:bold;color:#333;border-bottom:1px solid #eee;padding-bottom:6px;margin-bottom:10px}
+  .sub-title{font-size:12px;font-weight:bold;color:#555;margin:10px 0 6px}
+  .info-table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:12px}
+  .info-table th{background:#f4f7fb;color:#444;font-weight:600;padding:5px 8px;border:1px solid #d5dce8;width:90px;white-space:nowrap}
+  .info-table td{padding:5px 8px;border:1px solid #d5dce8}
+  .data-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px}
+  .data-table thead tr{background:#f4f7fb}
+  .data-table th,.data-table td{padding:5px 8px;border:1px solid #d5dce8;white-space:nowrap}
+  .data-table td.amount{color:#c0392b;font-weight:600}
+  .summary{font-size:12px;background:#fafafa;border:1px solid #eee;border-radius:4px;padding:6px 10px;margin-top:8px;line-height:1.6}
+  .summary span{font-weight:600;color:#555}
+  .stats{font-size:11px;color:#888;margin-top:8px}
+  .img-grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+  .img-grid figure{flex:0 0 auto;max-width:240px;border:1px solid #dde;border-radius:4px;overflow:hidden;background:#fafafa}
+  .img-grid img{width:240px;height:180px;object-fit:cover;display:block}
+  .img-grid figcaption{font-size:10px;color:#666;padding:4px 6px;text-align:center;word-break:break-all}
+  .empty{font-size:12px;color:#999;text-align:center;padding:10px 0}
+  .opinion{font-size:13px;line-height:1.8;padding:10px 14px;background:#fafcff;border:1px solid #d5dce8;border-radius:4px;white-space:pre-wrap}
+  .footer{margin-top:40px;padding-top:16px;border-top:1px solid #ddd;font-size:11px;color:#999;text-align:right}
+  @media print{.img-grid img{max-height:180px}}
+</style>
+</head>
+<body>
+<div class="report-header">
+  <h1>公 估 理 赔 报 告</h1>
+  <div class="meta">报告日期：${today} &nbsp;|&nbsp; 案件编号：${escHtml(selectedCase?.id)} &nbsp;|&nbsp; 保单号：${escHtml(selectedCase?.policyNo)}</div>
+</div>
+
+<section>
+  <h2>一、案件基本信息</h2>
+  <table class="info-table">
+    <tr><th>案件编号</th><td>${escHtml(selectedCase?.id)}</td><th>保单号</th><td>${escHtml(selectedCase?.policyNo)}</td></tr>
+    <tr><th>被保险人</th><td>${escHtml(selectedCase?.insured)}</td><th>保险公司</th><td>${escHtml(selectedCase?.company)}</td></tr>
+    <tr><th>险种</th><td>${escHtml(selectedCase?.type)}</td><th>报案时间</th><td>${escHtml(selectedCase?.reportTime)}</td></tr>
+    <tr><th>当前状态</th><td>${escHtml(selectedCase?.status)}</td><th>报案人</th><td>${escHtml(selectedCase?.reporter)}</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>二、查勘历史</h2>
+  ${surveyBlocksHtml || '<p class="empty">暂无查勘记录</p>'}
+</section>
+
+<section>
+  <h2>三、理赔分（货损明细）</h2>
+  <table class="data-table">
+    <thead><tr><th>序号</th><th>品名</th><th>数量</th><th>包装</th><th>单价</th><th>报损金额</th><th>报损类型</th><th>核定意见</th></tr></thead>
+    <tbody>${claimRowsHtml || '<tr><td colspan="8" style="text-align:center;color:#999;padding:10px">暂无数据</td></tr>'}</tbody>
+  </table>
+</section>
+
+<section>
+  <h2>四、保险公司认定意见</h2>
+  <div class="opinion">${escHtml(insurerOpinion) || '<span style="color:#999">（暂未填写）</span>'}</div>
+</section>
+
+${guideRowsHtml ? `
+<section>
+  <h2>五、理赔引导记录</h2>
+  <table class="data-table">
+    <thead><tr><th>序号</th><th>日期</th><th>回退意见</th><th>备注</th></tr></thead>
+    <tbody>${guideRowsHtml}</tbody>
+  </table>
+</section>` : ''}
+
+${attachmentsSection}
+
+<div class="footer">本报告由系统自动生成，仅供参考 &nbsp;·&nbsp; 生成时间：${new Date().toLocaleString('zh-CN')}</div>
+</body>
+</html>`;
+    return html;
+  };
+
   const buildAppraisalReport = () => {
     const today = getToday();
     const lines: string[] = [];
@@ -296,16 +482,19 @@ export default function AppraisalClaims({
   const handleGenerateAppraisalReport = () => {
     const content = buildAppraisalReport();
     setAppraisalReportPreview(content);
-    setAppraisalActionMessage('已生成公估报告预览，文件已自动下载。');
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `公估理赔报告_${selectedCase?.id || '未命名'}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    setAppraisalActionMessage('已生成公估报告预览，图文版（HTML）文件已自动下载，可在浏览器中打开查看或打印为 PDF。');
+
+    // 下载图文 HTML 版本
+    const htmlContent = buildAppraisalReportHtml();
+    const htmlBlob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const htmlUrl = URL.createObjectURL(htmlBlob);
+    const htmlLink = document.createElement('a');
+    htmlLink.href = htmlUrl;
+    htmlLink.download = `公估理赔报告_${selectedCase?.id || '未命名'}.html`;
+    document.body.appendChild(htmlLink);
+    htmlLink.click();
+    htmlLink.remove();
+    URL.revokeObjectURL(htmlUrl);
   };
 
   const appendDetailAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -992,11 +1181,29 @@ export default function AppraisalClaims({
                           const input = document.createElement('input');
                           input.type = 'file';
                           input.multiple = true;
+                          input.accept = 'image/*';
                           input.onchange = (ev) => {
-                            const files = (ev.target as HTMLInputElement).files;
-                            if (files?.length) {
-                              setSurveyBlocks((prev) => prev.map((b) => b.id === block.id ? { ...b, imageCount: b.imageCount + files.length } : b));
-                            }
+                            const files = Array.from((ev.target as HTMLInputElement).files || []);
+                            if (!files.length) return;
+                            let loaded = 0;
+                            const newImages: Array<{ id: string; name: string; dataUrl: string }> = [];
+                            files.forEach((file) => {
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                newImages.push({ id: `${Date.now()}-${Math.random()}`, name: file.name, dataUrl: String(reader.result || '') });
+                                loaded += 1;
+                                if (loaded === files.length) {
+                                  setSurveyBlocks((prev) =>
+                                    prev.map((b) =>
+                                      b.id === block.id
+                                        ? { ...b, imageCount: b.imageCount + files.length, images: [...(b.images || []), ...newImages] }
+                                        : b,
+                                    ),
+                                  );
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            });
                           };
                           input.click();
                         }}
@@ -1162,17 +1369,21 @@ export default function AppraisalClaims({
               <FileText className="w-3.5 h-3.5 text-blue-500" />
               公估报告预览
             </div>
-            <textarea
-              value={appraisalReportPreview}
-              readOnly
-              placeholder="点击底部「一键生成公估报告」后，此处展示预览并自动下载 txt 文件。"
-              className="flex-1 min-h-[300px] resize-none rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 leading-relaxed font-mono"
-            />
-            {appraisalActionMessage && (
+            {appraisalActionMessage ? (
               <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
                 {appraisalActionMessage}
               </div>
+            ) : (
+              <div className="rounded border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-400 text-center">
+                点击底部「一键生成公估报告」，将自动下载图文版 HTML 报告（可在浏览器打开并打印为 PDF）。
+              </div>
             )}
+            <textarea
+              value={appraisalReportPreview}
+              readOnly
+              placeholder="生成后此处展示纯文本摘要预览..."
+              className="flex-1 min-h-[260px] resize-none rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 leading-relaxed font-mono"
+            />
           </aside>
         </div> {/* end grid */}
 
