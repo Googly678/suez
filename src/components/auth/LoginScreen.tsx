@@ -20,8 +20,7 @@ export default function LoginScreen({
   error: string;
 }) {
   const [form, setForm] = useState({ username: demoAccounts[0]?.username || 'admin', password: demoAccounts[0]?.password || '123456' });
-  const logoAiSrc = `${import.meta.env.BASE_URL}sigreal-logo.ai`;
-  const logoFullSrc = `${import.meta.env.BASE_URL}sigreal-logo.svg`;
+  const logoSrc = `${import.meta.env.BASE_URL}sigreal-logo.svg`;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#06111d] text-white">
@@ -40,9 +39,7 @@ export default function LoginScreen({
           </div>
 
           <div className="mt-6 rounded-2xl border border-[#20cfe0]/25 bg-slate-950/65 p-4 sm:p-5">
-            <object data={logoAiSrc} type="application/pdf" className="block h-auto w-full overflow-hidden rounded-md">
-              <img src={logoFullSrc} alt="SiGReal Tech" className="h-auto w-full object-contain" />
-            </object>
+            <img src={logoSrc} alt="SiGReal Tech" className="h-auto w-full object-contain" />
           </div>
 
           <h1 className="mt-8 text-3xl font-semibold leading-tight text-cyan-50 sm:text-4xl">理赔与权限协同中枢</h1>

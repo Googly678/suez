@@ -499,7 +499,6 @@ export default function App() {
   const [activeItem, setActiveItem] = useState('我的保单');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedGroup, setExpandedGroup] = useState('保单管理');
-  const logoAiSrc = `${import.meta.env.BASE_URL}sigreal-logo.ai`;
   const logoFullSrc = `${import.meta.env.BASE_URL}sigreal-logo.svg`;
   const logoMarkSrc = `${import.meta.env.BASE_URL}sigreal-mark.svg`;
   const [resetKey, setResetKey] = useState(0);
@@ -1513,9 +1512,7 @@ export default function App() {
         <div className="h-16 flex items-center justify-center border-b border-slate-800 px-4 shrink-0">
           {isSidebarOpen ? (
             <div className="flex w-full items-center justify-center">
-              <object data={logoAiSrc} type="application/pdf" className="h-9 w-full max-w-full overflow-hidden rounded-sm">
-                <img src={logoFullSrc} alt="SiGReal Tech" className="h-9 w-auto max-w-full object-contain" />
-              </object>
+              <img src={logoFullSrc} alt="SiGReal Tech" className="h-9 w-auto max-w-full object-contain" />
             </div>
           ) : (
             <img src={logoMarkSrc} alt="SiGReal" className="h-8 w-8 object-contain" />
