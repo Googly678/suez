@@ -1280,10 +1280,11 @@ export default function App() {
   const handleAppraisalSubmit = (claimId: string, appraisalData: any, reviewStage: 'appraisal' | 'insurer' = 'appraisal') => {
     let assistNo = '';
     let assistStatus = '';
+    const isReject = appraisalData.reviewDecision === 'reject';
 
     if (appraisalData.reviewDecision === 'approve') {
       assistStatus = reviewStage === 'insurer' ? '定损协议通过' : '定损中';
-    } else if (appraisalData.reviewDecision === 'reject') {
+    } else if (isReject) {
       assistStatus = reviewStage === 'insurer' ? '审核退回' : '已退回';
     }
 
@@ -1301,33 +1302,65 @@ export default function App() {
       }),
     );
 
-    if (assistNo && assistStatus) {
-      setClaimAssistPool((prev) =>
-        prev.map((item) =>
-          item.assistNo === assistNo
-            ? {
+    // 当审核/公估退回时，不更新 claimAssistPool 的状态
+    // 这样理赔协助保持为 '已提交' 状态，允许用户继续编辑后重新提交
+    if (!isReject) {
+      if (assistNo && assistStatus) {
+        setClaimAssistPool((prev) =>
+          prev.map((item) =>
+            item.assistNo === assistNo
+              ? {
+                  ...item,
+                  status: assistStatus,
+                  latestReviewComment: appraisalData.reviewComment || item.latestReviewComment || '',
+                  updatedAt: new Date().toLocaleString(),
+                }
+              : item,
+          ),
+        );
+      } else if (assistStatus) {
+        setClaimAssistPool((prev) =>
+          prev.map((item) => {
+            if (item.relatedCaseNo === claimId) {
+              return {
                 ...item,
                 status: assistStatus,
                 latestReviewComment: appraisalData.reviewComment || item.latestReviewComment || '',
                 updatedAt: new Date().toLocaleString(),
-              }
-            : item,
-        ),
-      );
-    } else if (assistStatus) {
-      setClaimAssistPool((prev) =>
-        prev.map((item) => {
-          if (item.relatedCaseNo === claimId) {
-            return {
-              ...item,
-              status: assistStatus,
-              latestReviewComment: appraisalData.reviewComment || item.latestReviewComment || '',
-              updatedAt: new Date().toLocaleString(),
-            };
-          }
-          return item;
-        }),
-      );
+              };
+            }
+            return item;
+          }),
+        );
+      }
+    } else {
+      // 退回时只更新 latestReviewComment，不改状态
+      if (assistNo) {
+        setClaimAssistPool((prev) =>
+          prev.map((item) =>
+            item.assistNo === assistNo
+              ? {
+                  ...item,
+                  latestReviewComment: appraisalData.reviewComment || item.latestReviewComment || '',
+                  updatedAt: new Date().toLocaleString(),
+                }
+              : item,
+          ),
+        );
+      } else {
+        setClaimAssistPool((prev) =>
+          prev.map((item) => {
+            if (item.relatedCaseNo === claimId) {
+              return {
+                ...item,
+                latestReviewComment: appraisalData.reviewComment || item.latestReviewComment || '',
+                updatedAt: new Date().toLocaleString(),
+              };
+            }
+            return item;
+          }),
+        );
+      }
     }
 
     const decision = appraisalData.reviewDecision === 'approve' ? 'approve' : appraisalData.reviewDecision === 'reject' ? 'reject' : '';

@@ -60,6 +60,7 @@ export default function AppraisalClaims({
   ]);
   const [detailAttachmentCount, setDetailAttachmentCount] = useState(0);
   const [reportPreview, setReportPreview] = useState('');
+  const [claimLogText, setClaimLogText] = useState('');
   const [insurerActionMessage, setInsurerActionMessage] = useState('');
   const [appraisalReportPreview, setAppraisalReportPreview] = useState('');
   const [appraisalReportHtml, setAppraisalReportHtml] = useState('');
@@ -216,13 +217,14 @@ export default function AppraisalClaims({
     return groups.filter((group) => Array.isArray(group.files) && group.files.length > 0);
   };
 
-  const buildInsurerReport = () => {
+  const buildClaimLog = () => {
     const header = [
-      '理赔审核报告',
+      '理赔日志',
       `案件编号：${selectedCase?.id || '--'}`,
       `保单号：${selectedCase?.policyNo || '--'}`,
       `被保险人：${selectedCase?.insured || '--'}`,
-      `审核日期：${getToday()}`,
+      `保险公司：${selectedCase?.company || '--'}`,
+      `生成日期：${getToday()}`,
       '',
       `保险公司认定意见：${insurerOpinion || '--'}`,
       '',
@@ -236,20 +238,30 @@ export default function AppraisalClaims({
     return [...header, ...rowLines, '', `最终结论：${selectedCase?.reviewDecision === 'reject' ? '退回' : '同意'}`, `审核意见：${reviewComment || '--'}`].join('\n');
   };
 
-  const handleGenerateInsurerReport = () => {
-    const content = buildInsurerReport();
+  const handleGenerateClaimLog = () => {
+    const content = buildClaimLog();
     setReportPreview(content);
-    setInsurerActionMessage('已生成报告预览。');
+    setClaimLogText(content);
+    setInsurerActionMessage('已生成理赔日志预览。请确认内容后点击“下载理赔日志”。');
+  };
 
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const handleDownloadClaimLog = () => {
+    if (!claimLogText) {
+      setInsurerActionMessage('请先生成预览，再下载日志。');
+      return;
+    }
+    const blob = new Blob([claimLogText], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `理赔审核报告_${selectedCase?.id || '未命名'}.txt`;
+    link.download = `理赔日志_${selectedCase?.id || '未命名'}.txt`;
+    link.target = '_blank';
+    link.rel = 'noopener';
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+    setInsurerActionMessage('理赔日志已下载。');
   };
 
   const buildAppraisalReportHtml = () => {
@@ -537,6 +549,8 @@ ${attachmentsSection}
       setAppraisalReportPreview('');
       setAppraisalReportHtml('');
       setAppraisalActionMessage('');
+      setClaimLogText('');
+      setReportPreview('');
       // 同步查勘历史数据
       if (initialSelectedCase.surveyBlocks?.length) {
         setSurveyBlocks(initialSelectedCase.surveyBlocks);
@@ -939,13 +953,21 @@ ${attachmentsSection}
           </div>
 
           <aside className="rounded-xl border border-rose-300 bg-white p-4 text-sm text-slate-600 min-h-[220px]">
-            <div className="text-xs text-slate-500 mb-2">理赔员请填写完整案件报告</div>
+            <div className="text-xs text-slate-500 mb-2">理赔员操作日志</div>
             <textarea
               value={reportPreview}
               readOnly
-              placeholder="点击“一键生成理赔报告”后在此展示报告预览"
+              placeholder="点击“一键生成理赔日志”后在此展示日志预览"
               className="h-[260px] w-full resize-none rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700"
             />
+            <button
+              type="button"
+              onClick={handleDownloadClaimLog}
+              disabled={!claimLogText}
+              className="mt-3 w-full px-4 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50 text-xs"
+            >
+              下载理赔日志
+            </button>
           </aside>
         </div>
 
@@ -978,11 +1000,11 @@ ${attachmentsSection}
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleGenerateInsurerReport}
+              onClick={handleGenerateClaimLog}
               disabled={!isReviewEditable}
               className="px-4 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
-              一键生成理赔报告
+              一键生成理赔日志
             </button>
             <button
               type="button"
