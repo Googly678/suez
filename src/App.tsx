@@ -151,6 +151,12 @@ const mockAssists = [
     startTime: '2026-01-05', endTime: '', status: '已暂存',
     latestReviewComment: '', reportTime: '2026-01-05 14:00:00', updatedAt: '2026-01-05 14:00:00',
   },
+  {
+    assistNo: 'ASSIST-2026-004', relatedCaseNo: 'CASE-2026-004', policyNo: 'POL-2026-004', customerCode: 'JD004',
+    customer: '京东物流', company: '京东物流有限公司', type: '货物运输险', insured: '京东物流',
+    startTime: '2026-02-01', endTime: '', status: '',
+    latestReviewComment: '保司要求补充转账凭证和货权证明，请重新提交。', reportTime: '2026-02-15 10:30:00', updatedAt: '2026-03-10 15:45:00',
+  },
 ];
 
 const mockCases = [
@@ -263,6 +269,48 @@ const mockCases = [
     // 公估录入尚未填写（公估中阶段）
     surveyPeriod: '', surveyInitiator: '', surveyContact: '', surveyLocation: '', surveySummary: '',
     surveyRows: [], guideRows: [],
+  },
+  {
+    id: 'CASE-2026-004', assistNo: 'ASSIST-2026-004', policyNo: 'POL-2026-004', customerCode: 'JD004',
+    insured: '京东物流', company: '阳光财险', type: '货物运输险', status: '审核退回',
+    reportTime: '2026-02-15', reviewDecision: '退回补充', reviewComment: '保司要求补充转账凭证和货权证明，请重新提交。', reviewTime: '2026-03-10',
+    reporter: '理赔协助', startTime: '2026-01-01', endTime: '2026-12-31',
+    // 理赔录入详情
+    cargoList: [
+      { id: 1, name: '家电配件（压缩机）', quantity: '150', unit: '纸箱', price: '280', amount: '42000', type: '报废' },
+      { id: 2, name: '电源驱动板', quantity: '300', unit: '箱装', price: '45', amount: '13500', type: '贬值折价' },
+    ],
+    accidentInfo: {
+      time: '2026-02-10 16:00',
+      reportTime: '2026-02-15 10:30',
+      reportNo: 'RPT-2026-0215-004',
+      departureProvince: '江苏省', departureCity: '南宁市',
+      destinationProvince: '广西壮族自治区', destinationCity: '南宁市',
+      province: '广西壮族自治区', city: '南宁市', district: '', address: '南宁绕城高速西向段',
+      reason1: '交通事故', reason2: '车辆倾覆',
+      description: '京东物流配送车辆在南宁绕城高速西向段因刹车失效导致倾覆，车厢内家电配件受损，损失约¥55,500。'
+    },
+    ownerName: '京东物流有限公司',
+    logisticsCompanies: [{ id: 1, name: '广西京东物流配送有限公司' }],
+    truckPlateNo: '桂A66666',
+    indirectLossList: [{ id: 1, amount: '3500', item: '车辆修理费', note: '货方承诺支付部分修理费用' }],
+    showIndirectLoss: true,
+    remarks: '已提交交通事故责任认定书及初步验损报告。',
+    // 公估录入详情
+    surveyPeriod: '2026-02-18 至 2026-03-05',
+    surveyInitiator: '陈公估',
+    surveyContact: '13600003366',
+    surveyLocation: '广西南宁市京东物流仓库',
+    surveySummary: '现场查勘确认，压缩机150箱报废，电源驱动板300箱贬值约20%，建议按报废及贬值分别核损。',
+    surveyRows: [
+      { id: 1, itemName: '家电配件（压缩机）', quantity: '150', packageType: '纸箱', lossDesc: '外观破损，内部机械损伤，全部报废', voucher: '照片×15张' },
+      { id: 2, itemName: '电源驱动板', quantity: '300', packageType: '箱装', lossDesc: '芯片表面划伤，功能正常，贬值处理', voucher: '测试报告×1份' },
+    ],
+    guideRows: [
+      { id: 1, date: '2026-02-18', feedback: '初步验损，确认货损情况及数量', note: '货主代表到场确认' },
+      { id: 2, date: '2026-02-28', feedback: '鉴定维修成本，确认贬值折扣率', note: '与货主视频会议确认' },
+      { id: 3, date: '2026-03-05', feedback: '理算金额已进行两轮协商', note: '待转账凭证和货权证明补充' },
+    ],
   },
 ];
 
