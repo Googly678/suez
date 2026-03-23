@@ -1333,13 +1333,14 @@ export default function App() {
         );
       }
     } else {
-      // 退回时只更新 latestReviewComment，不改状态
+      // 退回时将协助状态改回空字符串（草稿），允许再次编辑和提交
       if (assistNo) {
         setClaimAssistPool((prev) =>
           prev.map((item) =>
             item.assistNo === assistNo
               ? {
                   ...item,
+                  status: '',
                   latestReviewComment: appraisalData.reviewComment || item.latestReviewComment || '',
                   updatedAt: new Date().toLocaleString(),
                 }
@@ -1352,6 +1353,7 @@ export default function App() {
             if (item.relatedCaseNo === claimId) {
               return {
                 ...item,
+                status: '',
                 latestReviewComment: appraisalData.reviewComment || item.latestReviewComment || '',
                 updatedAt: new Date().toLocaleString(),
               };

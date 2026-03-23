@@ -236,6 +236,7 @@ export default function ClaimsAssistance({
     setIndirectLossList((prev) => prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
   };
 
+  // 只在已提交、审核中、已通过时锁定。退回状态允许继续编辑和重新提交
   const isLocked = ['已提交', '审核中', '已通过'].includes(selectedClaim?.status || '') || !canManage;
 
   const handleSubmitConfirm = () => {
@@ -1411,6 +1412,7 @@ export default function ClaimsAssistance({
                   <td className="px-4 py-3 text-slate-700">{row.accidentType || '--'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      row.status === '' ? 'bg-slate-100 text-slate-600' :
                       row.status === '已暂存' ? 'bg-slate-100 text-slate-700' :
                       row.status === '已提交' ? 'bg-blue-100 text-blue-700' :
                       row.status === '审核中' ? 'bg-amber-100 text-amber-700' :
@@ -1418,7 +1420,7 @@ export default function ClaimsAssistance({
                       row.status === '已退回' ? 'bg-rose-100 text-rose-700' :
                       'bg-slate-100 text-slate-700'
                     }`}>
-                      {row.status || '--'}
+                      {row.status === '' ? '草稿' : (row.status || '--')}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{row.reviewAging || '--'}</td>
