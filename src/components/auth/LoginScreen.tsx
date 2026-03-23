@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Lock, User } from 'lucide-react';
+import { ArrowRight, Fingerprint, Lock, ShieldCheck, User } from 'lucide-react';
 
 type DemoAccount = {
   username: string;
@@ -20,43 +20,67 @@ export default function LoginScreen({
   error: string;
 }) {
   const [form, setForm] = useState({ username: demoAccounts[0]?.username || 'admin', password: demoAccounts[0]?.password || '123456' });
+  const logoAiSrc = `${import.meta.env.BASE_URL}sigreal-logo.ai`;
+  const logoFullSrc = `${import.meta.env.BASE_URL}sigreal-logo.svg`;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_34%),linear-gradient(135deg,_#e2e8f0,_#f8fafc_45%,_#dbeafe)] flex items-center justify-center px-6 py-10">
-      <div className="w-full max-w-6xl grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="rounded-3xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_30px_80px_rgba(15,23,42,0.16)] p-10 lg:p-14">
-          <div className="inline-flex items-center gap-3 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700">
-            <Building2 className="h-4 w-4" />
-            Suez 综合业务工作台
+    <div className="relative min-h-screen overflow-hidden bg-[#06111d] text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-24 -top-28 h-80 w-80 rounded-full bg-[#20cfe0]/28 blur-3xl" />
+        <div className="absolute right-[-120px] top-20 h-[380px] w-[380px] rounded-full bg-[#1ea7d7]/22 blur-3xl" />
+        <div className="absolute bottom-[-160px] left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#26d7e6]/14 blur-3xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(31,41,55,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(31,41,55,0.25)_1px,transparent_1px)] bg-[size:34px_34px]" />
+      </div>
+
+      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-7xl items-center gap-8 px-5 py-8 lg:grid-cols-[1.2fr_0.8fr] lg:px-10">
+        <section className="rounded-3xl border border-[#20cfe0]/25 bg-slate-900/45 p-6 shadow-[0_32px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:p-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#20cfe0]/40 bg-[#20cfe0]/10 px-4 py-1.5 text-xs font-semibold tracking-[0.2em] text-[#8de9f2]">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            SIGREAL INSURANCE SUITE
           </div>
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-slate-900">三级机构与角色权限管理已接入</h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-            当前版本支持总部-大区-分公司三级机构树、角色权限编排、用户角色分配，以及前后端统一的权限控制。请使用右侧演示账号登录体验不同角色视角。
+
+          <div className="mt-6 rounded-2xl border border-[#20cfe0]/25 bg-slate-950/65 p-4 sm:p-5">
+            <object data={logoAiSrc} type="application/pdf" className="block h-auto w-full overflow-hidden rounded-md">
+              <img src={logoFullSrc} alt="SiGReal Tech" className="h-auto w-full object-contain" />
+            </object>
+          </div>
+
+          <h1 className="mt-8 text-3xl font-semibold leading-tight text-cyan-50 sm:text-4xl">理赔与权限协同中枢</h1>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
+            将保单管理、理赔协助、公估理算、保司审核统一在同一工作台。
+            面向总部-大区-分公司组织体系，提供精细化角色权限控制与全流程可追溯操作记录。
           </p>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2">
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
             {demoAccounts.map((account) => (
               <button
                 key={account.username}
                 type="button"
                 onClick={() => setForm({ username: account.username, password: account.password })}
-                className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md"
+                className="group rounded-2xl border border-[#20cfe0]/20 bg-slate-900/70 px-4 py-3 text-left transition duration-300 hover:border-[#20cfe0]/55 hover:bg-slate-900"
               >
-                <div className="text-sm font-semibold text-slate-900">{account.realName}</div>
-                <div className="mt-1 text-xs text-slate-500">{account.roleName}</div>
-                <div className="mt-3 text-xs text-slate-600">账号：{account.username}</div>
-                <div className="text-xs text-slate-600">密码：{account.password}</div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold text-cyan-100">{account.realName}</div>
+                  <ArrowRight className="h-4 w-4 text-[#7adfea]/60 transition group-hover:translate-x-0.5 group-hover:text-[#a5eff6]" />
+                </div>
+                <div className="mt-1 text-xs text-slate-400">{account.roleName}</div>
+                <div className="mt-3 text-xs text-slate-300">账号：{account.username}</div>
+                <div className="text-xs text-slate-300">密码：{account.password}</div>
               </button>
             ))}
           </div>
         </section>
 
-        <section className="rounded-3xl bg-slate-950 text-white shadow-[0_30px_80px_rgba(15,23,42,0.28)] p-8 lg:p-10">
-          <div className="text-sm uppercase tracking-[0.24em] text-blue-300">登录系统</div>
-          <h2 className="mt-3 text-2xl font-semibold">基于角色的权限访问</h2>
+        <section className="rounded-3xl border border-[#20cfe0]/35 bg-slate-950/80 p-7 shadow-[0_24px_72px_rgba(32,207,224,0.2)] backdrop-blur-xl lg:p-9">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#20cfe0]/35 bg-[#20cfe0]/10 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-[#9ceef5]">
+            <Fingerprint className="h-3.5 w-3.5" />
+            安全登录入口
+          </div>
+          <h2 className="mt-4 text-2xl font-semibold text-cyan-50">欢迎使用 SiGReal 工作台</h2>
+          <p className="mt-2 text-sm text-slate-400">请输入账号与密码，进入对应角色视图。</p>
 
           <form
-            className="mt-8 space-y-5"
+            className="mt-7 space-y-5"
             onSubmit={(event) => {
               event.preventDefault();
               onLogin(form);
@@ -64,12 +88,12 @@ export default function LoginScreen({
           >
             <label className="block">
               <span className="mb-2 block text-sm text-slate-300">用户名</span>
-              <div className="flex items-center rounded-2xl border border-slate-800 bg-slate-900 px-4">
-                <User className="h-4 w-4 text-slate-500" />
+              <div className="flex items-center rounded-2xl border border-[#20cfe0]/20 bg-slate-900/80 px-4 transition focus-within:border-[#20cfe0]/65">
+                <User className="h-4 w-4 text-[#8be8f1]/85" />
                 <input
                   value={form.username}
                   onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
-                  className="w-full bg-transparent px-3 py-4 text-sm text-white outline-none"
+                  className="w-full bg-transparent px-3 py-3.5 text-sm text-white outline-none placeholder:text-slate-500"
                   placeholder="请输入用户名"
                 />
               </div>
@@ -77,24 +101,24 @@ export default function LoginScreen({
 
             <label className="block">
               <span className="mb-2 block text-sm text-slate-300">密码</span>
-              <div className="flex items-center rounded-2xl border border-slate-800 bg-slate-900 px-4">
-                <Lock className="h-4 w-4 text-slate-500" />
+              <div className="flex items-center rounded-2xl border border-[#20cfe0]/20 bg-slate-900/80 px-4 transition focus-within:border-[#20cfe0]/65">
+                <Lock className="h-4 w-4 text-[#8be8f1]/85" />
                 <input
                   type="password"
                   value={form.password}
                   onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-                  className="w-full bg-transparent px-3 py-4 text-sm text-white outline-none"
+                  className="w-full bg-transparent px-3 py-3.5 text-sm text-white outline-none placeholder:text-slate-500"
                   placeholder="请输入密码"
                 />
               </div>
             </label>
 
-            {error ? <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
+            {error ? <div className="rounded-xl border border-rose-400/35 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-2xl bg-blue-500 px-4 py-4 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl bg-gradient-to-r from-[#20cfe0] to-[#1ea7d7] px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:from-[#3cdae8] hover:to-[#37bde2] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? '登录中...' : '登录并进入系统'}
             </button>

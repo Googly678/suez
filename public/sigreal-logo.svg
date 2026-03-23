@@ -1,0 +1,20 @@
+<svg width="2048" height="436" viewBox="0 0 2048 436" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2048" height="436" fill="#E5E7EB"/>
+  <g transform="translate(20,20)">
+    <circle cx="170" cy="30" r="45" fill="#20CFE0"/>
+    <circle cx="300" cy="160" r="45" fill="#20CFE0"/>
+    <circle cx="170" cy="290" r="45" fill="#20CFE0"/>
+    <circle cx="40" cy="160" r="45" fill="#20CFE0"/>
+    <circle cx="78" cy="68" r="45" fill="#20CFE0"/>
+    <circle cx="262" cy="68" r="45" fill="#20CFE0"/>
+    <circle cx="78" cy="252" r="45" fill="#20CFE0"/>
+    <circle cx="262" cy="252" r="45" fill="#20CFE0"/>
+
+    <path d="M170 78C137 78 110 105 110 138C110 171 137 198 170 198C203 198 230 225 230 258C230 291 203 318 170 318C137 318 110 291 110 258" stroke="#F1F5F9" stroke-width="30" stroke-linecap="round"/>
+    <path d="M170 318C203 318 230 291 230 258C230 225 203 198 170 198C137 198 110 171 110 138C110 105 137 78 170 78C203 78 230 105 230 138" stroke="#F1F5F9" stroke-width="30" stroke-linecap="round" opacity="0.92"/>
+  </g>
+
+  <g transform="translate(420,72)" fill="#4A4A51" font-family="Segoe UI, Arial, sans-serif">
+    <text x="0" y="240" font-size="270" font-weight="700" letter-spacing="1">SiGReal Tech</text>
+  </g>
+</svg>

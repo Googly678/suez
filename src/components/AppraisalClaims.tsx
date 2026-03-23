@@ -41,7 +41,7 @@ export default function AppraisalClaims({
       initiator: '',
       contact: '',
       location: '',
-      rows: [{ id: 1, itemName: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }],
+      rows: [{ id: 1, itemName: '', model: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }],
       summary: '',
       imageCount: 0,
       notebookCount: 0,
@@ -49,7 +49,7 @@ export default function AppraisalClaims({
     },
   ]);
   const [claimRows] = useState([
-    { id: 1, itemName: '电子设备', quantity: '50', packageType: '纸箱', unitPrice: '1000', claimAmount: '50000', claimType: '报废', appraisalOpinion: '同意按报废核损' },
+    { id: 1, itemName: '电子设备', model: 'XH-001', quantity: '50', packageType: '纸箱', unitPrice: '1000', claimAmount: '50000', claimType: '报废', appraisalOpinion: '同意按报废核损' },
   ]);
   const [insurerOpinion, setInsurerOpinion] = useState('');
   const [guideRows, setGuideRows] = useState([
@@ -62,6 +62,7 @@ export default function AppraisalClaims({
   const [reportPreview, setReportPreview] = useState('');
   const [insurerActionMessage, setInsurerActionMessage] = useState('');
   const [appraisalReportPreview, setAppraisalReportPreview] = useState('');
+  const [appraisalReportHtml, setAppraisalReportHtml] = useState('');
   const [appraisalActionMessage, setAppraisalActionMessage] = useState('');
   const detailAttachmentInputRef = React.useRef<HTMLInputElement>(null);
   const stageConfig =
@@ -151,7 +152,7 @@ export default function AppraisalClaims({
     initiator: '',
     contact: '',
     location: '',
-    rows: [{ id: Date.now(), itemName: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }],
+    rows: [{ id: Date.now(), itemName: '', model: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }],
     summary: '',
     imageCount: 0,
     notebookCount: 0,
@@ -174,7 +175,7 @@ export default function AppraisalClaims({
     setSurveyBlocks((prev) =>
       prev.map((b) =>
         b.id === blockId
-          ? { ...b, rows: [...b.rows, { id: Date.now(), itemName: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }] }
+          ? { ...b, rows: [...b.rows, { id: Date.now(), itemName: '', model: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }] }
           : b,
       ),
     );
@@ -201,6 +202,19 @@ export default function AppraisalClaims({
   };
 
   const getToday = () => new Date().toISOString().slice(0, 10);
+
+  const getAssistAttachmentGroups = (claimCase: any) => {
+    const groups = [
+      { label: '事故佐证', files: claimCase?.accidentEvidenceFiles || [] },
+      { label: '承托关系佐证', files: claimCase?.relationEvidenceFiles || [] },
+      { label: '车辆信息佐证', files: claimCase?.vehicleEvidenceFiles || [] },
+      { label: '直接损失佐证', files: claimCase?.directLossEvidenceFiles || [] },
+      { label: '间接损失佐证', files: claimCase?.indirectLossEvidenceFiles || [] },
+      { label: '备注附件', files: claimCase?.remarkEvidenceFiles || [] },
+    ];
+
+    return groups.filter((group) => Array.isArray(group.files) && group.files.length > 0);
+  };
 
   const buildInsurerReport = () => {
     const header = [
@@ -262,6 +276,7 @@ export default function AppraisalClaims({
         <tr>
           <td>${idx + 1}</td>
           <td>${escHtml(row.itemName)}</td>
+          <td>${escHtml((row as any).model)}</td>
           <td>${escHtml(row.quantity)}</td>
           <td>${escHtml(row.packageType)}</td>
           <td>${escHtml(row.lossDesc)}</td>
@@ -287,7 +302,7 @@ export default function AppraisalClaims({
           <div class="sub-title">货损明细</div>
           ${noRows ? '<p class="empty">暂无明细</p>' : `
           <table class="data-table">
-            <thead><tr><th>序号</th><th>品名</th><th>数量</th><th>包装</th><th>货损状态说明</th><th>佐证</th></tr></thead>
+            <thead><tr><th>序号</th><th>品名</th><th>型号</th><th>数量</th><th>包装</th><th>货损状态说明</th><th>佐证</th></tr></thead>
             <tbody>${rowsHtml}</tbody>
           </table>`}
           ${block.summary ? `<div class="summary"><span>查勘已况：</span>${escHtml(block.summary)}</div>` : ''}
@@ -300,6 +315,7 @@ export default function AppraisalClaims({
       <tr>
         <td>${idx + 1}</td>
         <td>${escHtml(row.itemName)}</td>
+        <td>${escHtml((row as any).model)}</td>
         <td>${escHtml(row.quantity)}</td>
         <td>${escHtml(row.packageType)}</td>
         <td>${escHtml(row.unitPrice)}</td>
@@ -395,8 +411,8 @@ export default function AppraisalClaims({
 <section>
   <h2>三、理赔分（货损明细）</h2>
   <table class="data-table">
-    <thead><tr><th>序号</th><th>品名</th><th>数量</th><th>包装</th><th>单价</th><th>报损金额</th><th>报损类型</th><th>核定意见</th></tr></thead>
-    <tbody>${claimRowsHtml || '<tr><td colspan="8" style="text-align:center;color:#999;padding:10px">暂无数据</td></tr>'}</tbody>
+    <thead><tr><th>序号</th><th>品名</th><th>型号</th><th>数量</th><th>包装</th><th>单价</th><th>报损金额</th><th>报损类型</th><th>核定意见</th></tr></thead>
+    <tbody>${claimRowsHtml || '<tr><td colspan="9" style="text-align:center;color:#999;padding:10px">暂无数据</td></tr>'}</tbody>
   </table>
 </section>
 
@@ -452,7 +468,7 @@ ${attachmentsSection}
       } else {
         block.rows.forEach((row, idx) => {
           if (!row.itemName) return;
-          lines.push(`    ${idx + 1}. 品名：${row.itemName}  数量：${row.quantity || '--'}  包装：${row.packageType || '--'}`);
+          lines.push(`    ${idx + 1}. 品名：${row.itemName}  型号：${(row as any).model || '--'}  数量：${row.quantity || '--'}  包装：${row.packageType || '--'}`);
           lines.push(`       货损状态：${row.lossDesc || '--'}`);
           if (row.voucher) lines.push(`       佐证：${row.voucher}`);
         });
@@ -482,11 +498,18 @@ ${attachmentsSection}
   const handleGenerateAppraisalReport = () => {
     const content = buildAppraisalReport();
     setAppraisalReportPreview(content);
-    setAppraisalActionMessage('已生成公估报告预览，图文版（HTML）文件已自动下载，可在浏览器中打开查看或打印为 PDF。');
-
-    // 下载图文 HTML 版本
     const htmlContent = buildAppraisalReportHtml();
-    const htmlBlob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    setAppraisalReportHtml(htmlContent);
+    setAppraisalActionMessage('已生成公估报告预览。请确认内容后点击“下载图文报告”。');
+  };
+
+  const handleDownloadAppraisalReport = () => {
+    if (!appraisalReportHtml) {
+      setAppraisalActionMessage('请先生成预览，再下载报告。');
+      return;
+    }
+
+    const htmlBlob = new Blob([appraisalReportHtml], { type: 'text/html;charset=utf-8' });
     const htmlUrl = URL.createObjectURL(htmlBlob);
     const htmlLink = document.createElement('a');
     htmlLink.href = htmlUrl;
@@ -495,6 +518,7 @@ ${attachmentsSection}
     htmlLink.click();
     htmlLink.remove();
     URL.revokeObjectURL(htmlUrl);
+    setAppraisalActionMessage('报告已下载。');
   };
 
   const appendDetailAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -510,6 +534,9 @@ ${attachmentsSection}
     if (initialSelectedCase) {
       setSelectedCase(initialSelectedCase);
       setReviewComment(initialSelectedCase.reviewComment || '');
+      setAppraisalReportPreview('');
+      setAppraisalReportHtml('');
+      setAppraisalActionMessage('');
       // 同步查勘历史数据
       if (initialSelectedCase.surveyBlocks?.length) {
         setSurveyBlocks(initialSelectedCase.surveyBlocks);
@@ -524,6 +551,7 @@ ${attachmentsSection}
           rows: (initialSelectedCase.surveyRows || []).map((r: any, i: number) => ({
             id: r.id || i + 1,
             itemName: r.itemName || '',
+            model: r.model || '',
             quantity: r.quantity || '',
             packageType: r.packageType || '',
             lossDesc: r.lossDesc || '',
@@ -615,11 +643,12 @@ ${attachmentsSection}
                   <div className="text-sm text-slate-400 text-center py-6">暂无理赔录入货损明细</div>
                 ) : (
                   <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                    <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <table className="w-full min-w-[1120px] table-fixed text-left border-collapse whitespace-nowrap text-sm">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                           <th className="px-4 py-2 w-14">序号</th>
-                          <th className="px-4 py-2">品名</th>
+                          <th className="px-4 py-2 w-[22%]">品名</th>
+                          <th className="px-4 py-2 w-[16%]">型号</th>
                           <th className="px-4 py-2 w-20">数量</th>
                           <th className="px-4 py-2 w-20">包装</th>
                           <th className="px-4 py-2 w-24">单价</th>
@@ -632,6 +661,7 @@ ${attachmentsSection}
                           <tr key={row.id || index}>
                             <td className="px-4 py-2 text-slate-500">{index + 1}</td>
                             <td className="px-4 py-2 text-slate-800">{row.name || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.model || '--'}</td>
                             <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
                             <td className="px-4 py-2 text-slate-700">{row.unit || '--'}</td>
                             <td className="px-4 py-2 text-slate-700">{row.price || '--'}</td>
@@ -676,6 +706,30 @@ ${attachmentsSection}
                     <div><span className="text-xs text-slate-500">出险时间：</span><span className="text-slate-800">{selectedCase.accidentInfo.time || '--'}</span></div>
                     <div><span className="text-xs text-slate-500">报案号：</span><span className="text-slate-800">{selectedCase.accidentInfo.reportNo || '--'}</span></div>
                     <div><span className="text-xs text-slate-500">出险地点：</span><span className="text-slate-800">{[selectedCase.accidentInfo.province, selectedCase.accidentInfo.city, selectedCase.accidentInfo.address].filter(Boolean).join(' ') || '--'}</span></div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-semibold text-slate-900">理赔协助上传附件（只读）</h3>
+              </div>
+              <div className="p-6">
+                {getAssistAttachmentGroups(selectedCase).length === 0 ? (
+                  <div className="text-sm text-slate-400 text-center py-4">暂无附件记录</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {getAssistAttachmentGroups(selectedCase).map((group) => (
+                      <div key={group.label} className="rounded-lg border border-slate-200 p-3 bg-slate-50/60">
+                        <div className="text-xs font-semibold text-slate-700 mb-2">{group.label}（{group.files.length}）</div>
+                        <div className="space-y-1">
+                          {group.files.map((file: string, idx: number) => (
+                            <div key={`${group.label}-${idx}`} className="text-xs text-slate-600 truncate">{file}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -738,11 +792,12 @@ ${attachmentsSection}
                           <div className="text-sm text-slate-400 text-center py-3">暂无货损明细</div>
                         ) : (
                           <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                            <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                            <table className="w-full min-w-[1080px] table-fixed text-left border-collapse whitespace-nowrap text-sm">
                               <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                                   <th className="px-4 py-2 w-14">序号</th>
-                                  <th className="px-4 py-2">品名</th>
+                                  <th className="px-4 py-2 w-[22%]">品名</th>
+                                  <th className="px-4 py-2 w-[16%]">型号</th>
                                   <th className="px-4 py-2 w-24">数量</th>
                                   <th className="px-4 py-2 w-32">包装</th>
                                   <th className="px-4 py-2 w-40">货损状态说明</th>
@@ -754,6 +809,7 @@ ${attachmentsSection}
                                   <tr key={row.id || rowIdx}>
                                     <td className="px-4 py-2 text-slate-500">{rowIdx + 1}</td>
                                     <td className="px-4 py-2 text-slate-800">{row.itemName || '--'}</td>
+                                    <td className="px-4 py-2 text-slate-700">{row.model || '--'}</td>
                                     <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
                                     <td className="px-4 py-2 text-slate-700">{row.packageType || '--'}</td>
                                     <td className="px-4 py-2 text-slate-700">{row.lossDesc || '--'}</td>
@@ -1030,6 +1086,82 @@ ${attachmentsSection}
         {/* Content */}
         <div className="flex-1 mt-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 pb-24">
         <div className="space-y-6">
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-lg font-semibold text-slate-900">保单与理赔协助汇总（只读）</h3>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                <div><div className="text-xs text-slate-500 mb-1">保单号</div><div className="font-medium text-slate-900">{selectedCase.policyNo || '--'}</div></div>
+                <div><div className="text-xs text-slate-500 mb-1">被保险人</div><div className="font-medium text-slate-900">{selectedCase.insured || '--'}</div></div>
+                <div><div className="text-xs text-slate-500 mb-1">保险公司</div><div className="font-medium text-slate-900">{selectedCase.company || '--'}</div></div>
+                <div><div className="text-xs text-slate-500 mb-1">险种</div><div className="font-medium text-slate-900">{selectedCase.type || '--'}</div></div>
+                <div><div className="text-xs text-slate-500 mb-1">车牌号</div><div className="font-medium text-slate-900">{selectedCase.truckPlateNo || '--'}</div></div>
+                <div><div className="text-xs text-slate-500 mb-1">货主</div><div className="font-medium text-slate-900">{selectedCase.ownerName || '--'}</div></div>
+                <div><div className="text-xs text-slate-500 mb-1">报案时间</div><div className="font-medium text-slate-900">{selectedCase.reportTime || '--'}</div></div>
+                <div><div className="text-xs text-slate-500 mb-1">案件号</div><div className="font-medium text-slate-900">{selectedCase.id || '--'}</div></div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-2">理赔协助录入货损明细</div>
+                {(selectedCase.cargoList || []).length === 0 ? (
+                  <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无货损明细</div>
+                ) : (
+                  <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table className="w-full min-w-[1120px] table-fixed text-left border-collapse whitespace-nowrap text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                          <th className="px-4 py-2 w-14">序号</th>
+                          <th className="px-4 py-2 w-[22%]">品名</th>
+                          <th className="px-4 py-2 w-[16%]">型号</th>
+                          <th className="px-4 py-2 w-20">数量</th>
+                          <th className="px-4 py-2 w-20">包装</th>
+                          <th className="px-4 py-2 w-24">单价</th>
+                          <th className="px-4 py-2 w-28">报损金额</th>
+                          <th className="px-4 py-2 w-28">报损类型</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(selectedCase.cargoList || []).map((row: any, index: number) => (
+                          <tr key={row.id || index}>
+                            <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                            <td className="px-4 py-2 text-slate-800">{row.name || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.model || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.unit || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.price || '--'}</td>
+                            <td className="px-4 py-2 text-rose-600">{row.amount || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.type || '--'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-2">理赔协助上传附件（按案件号关联）</div>
+                {getAssistAttachmentGroups(selectedCase).length === 0 ? (
+                  <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无附件记录</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {getAssistAttachmentGroups(selectedCase).map((group) => (
+                      <div key={group.label} className="rounded-lg border border-slate-200 p-3 bg-slate-50/60">
+                        <div className="text-xs font-semibold text-slate-700 mb-2">{group.label}（{group.files.length}）</div>
+                        <div className="space-y-1">
+                          {group.files.map((file: string, idx: number) => (
+                            <div key={`${group.label}-${idx}`} className="text-xs text-slate-600 truncate">{file}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* 查勘历史 — 多块 */}
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
@@ -1115,11 +1247,12 @@ ${attachmentsSection}
 
                     {/* 货损明细表 */}
                     <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                      <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                      <table className="w-full min-w-[1080px] table-fixed text-left border-collapse whitespace-nowrap text-sm">
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                             <th className="px-4 py-2 w-14">序号</th>
-                            <th className="px-4 py-2">品名</th>
+                            <th className="px-4 py-2 w-[22%]">品名</th>
+                            <th className="px-4 py-2 w-[16%]">型号</th>
                             <th className="px-4 py-2 w-24">数量</th>
                             <th className="px-4 py-2 w-32">包装</th>
                             <th className="px-4 py-2 w-40">货损状态说明</th>
@@ -1131,16 +1264,19 @@ ${attachmentsSection}
                             <tr key={row.id}>
                               <td className="px-4 py-2 text-slate-500">{rowIdx + 1}</td>
                               <td className="px-4 py-2">
-                                <input value={row.itemName} onChange={(e) => updateRowInBlock(block.id, row.id, 'itemName', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                                <input value={row.itemName} onChange={(e) => updateRowInBlock(block.id, row.id, 'itemName', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="品名" />
                               </td>
                               <td className="px-4 py-2">
-                                <input value={row.quantity} onChange={(e) => updateRowInBlock(block.id, row.id, 'quantity', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                                <input value={(row as any).model || ''} onChange={(e) => updateRowInBlock(block.id, row.id, 'model', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="型号" />
                               </td>
                               <td className="px-4 py-2">
-                                <input value={row.packageType} onChange={(e) => updateRowInBlock(block.id, row.id, 'packageType', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                                <input value={row.quantity} onChange={(e) => updateRowInBlock(block.id, row.id, 'quantity', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="数量" />
                               </td>
                               <td className="px-4 py-2">
-                                <input value={row.lossDesc} onChange={(e) => updateRowInBlock(block.id, row.id, 'lossDesc', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                                <input value={row.packageType} onChange={(e) => updateRowInBlock(block.id, row.id, 'packageType', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="包装" />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input value={row.lossDesc} onChange={(e) => updateRowInBlock(block.id, row.id, 'lossDesc', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="货损状态说明" />
                               </td>
                               <td className="px-4 py-2">
                                 <input value={row.voucher} onChange={(e) => updateRowInBlock(block.id, row.id, 'voucher', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="文件名" />
@@ -1240,45 +1376,6 @@ ${attachmentsSection}
           </section>
 
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-slate-900">理赔分</h3>
-              <span className="text-xs text-slate-500">仅供查看保单得失和理赔录入信息</span>
-            </div>
-            <div className="p-6">
-              <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                      <th className="px-4 py-2 w-14">序号</th>
-                      <th className="px-4 py-2">品名</th>
-                      <th className="px-4 py-2 w-20">数量</th>
-                      <th className="px-4 py-2 w-20">包装</th>
-                      <th className="px-4 py-2 w-24">单价</th>
-                      <th className="px-4 py-2 w-28">报损金额</th>
-                      <th className="px-4 py-2 w-28">报损类型</th>
-                      <th className="px-4 py-2">核定意见</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {claimRows.map((row) => (
-                      <tr key={row.id}>
-                        <td className="px-4 py-2 text-slate-500">{row.id}</td>
-                        <td className="px-4 py-2 text-slate-800">{row.itemName}</td>
-                        <td className="px-4 py-2 text-slate-700">{row.quantity}</td>
-                        <td className="px-4 py-2 text-slate-700">{row.packageType}</td>
-                        <td className="px-4 py-2 text-slate-700">{row.unitPrice}</td>
-                        <td className="px-4 py-2 text-rose-600">{row.claimAmount}</td>
-                        <td className="px-4 py-2 text-slate-700">{row.claimType}</td>
-                        <td className="px-4 py-2 text-slate-700">{row.appraisalOpinion}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
               <h3 className="text-lg font-semibold text-slate-900">保险公司认定意见</h3>
             </div>
@@ -1294,73 +1391,6 @@ ${attachmentsSection}
             </div>
           </section>
 
-          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">理赔引导录入</h3>
-              <button
-                type="button"
-                onClick={addGuideRow}
-                disabled={!isReviewEditable}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                <Plus className="w-3.5 h-3.5" /> 添加
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                      <th className="px-4 py-2 w-40">日期</th>
-                      <th className="px-4 py-2">回退意见</th>
-                      <th className="px-4 py-2">备注记录</th>
-                      <th className="px-4 py-2 w-28 text-center">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {guideRows.map((row) => (
-                      <tr key={row.id}>
-                        <td className="px-4 py-2">
-                          <input
-                            type="date"
-                            value={row.date}
-                            onChange={(e) => updateGuideRow(row.id, 'date', e.target.value)}
-                            disabled={!isReviewEditable}
-                            className="w-full px-2 py-1 border border-slate-200 rounded"
-                          />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={row.feedback}
-                            onChange={(e) => updateGuideRow(row.id, 'feedback', e.target.value)}
-                            disabled={!isReviewEditable}
-                            placeholder="回退意见"
-                            className="w-full px-2 py-1 border border-slate-200 rounded"
-                          />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={row.note}
-                            onChange={(e) => updateGuideRow(row.id, 'note', e.target.value)}
-                            disabled={!isReviewEditable}
-                            placeholder="备注"
-                            className="w-full px-2 py-1 border border-slate-200 rounded"
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-center">
-                          <button className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50" disabled={!isReviewEditable}>
-                            发送回函
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
         </div> {/* end left column */}
 
           {/* Right: Report Preview Aside */}
@@ -1375,7 +1405,7 @@ ${attachmentsSection}
               </div>
             ) : (
               <div className="rounded border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-400 text-center">
-                点击底部「一键生成公估报告」，将自动下载图文版 HTML 报告（可在浏览器打开并打印为 PDF）。
+                点击底部「一键生成公估报告」生成预览，再点击下方按钮确认下载图文版 HTML 报告。
               </div>
             )}
             <textarea
@@ -1384,6 +1414,14 @@ ${attachmentsSection}
               placeholder="生成后此处展示纯文本摘要预览..."
               className="flex-1 min-h-[260px] resize-none rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 leading-relaxed font-mono"
             />
+            <button
+              type="button"
+              onClick={handleDownloadAppraisalReport}
+              disabled={!appraisalReportHtml}
+              className="w-full rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              下载图文报告
+            </button>
           </aside>
         </div> {/* end grid */}
 

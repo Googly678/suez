@@ -978,8 +978,30 @@ app.get('/api/appraisal-cases', (req, res) => {
     return;
   }
   const rows = db
-    .prepare(`SELECT * FROM appraisal_cases WHERE org_id IN (${createInClausePlaceholder(scopedOrgIds)}) ORDER BY report_time DESC, case_no DESC`)
-    .all(...scopedOrgIds);
+    .prepare(`
+      SELECT
+        ac.*,
+        (
+          SELECT ca.payload_json
+          FROM claim_assists ca
+          WHERE (ca.assist_no = ac.assist_no OR ca.related_case_no = ac.case_no)
+            AND ca.org_id IN (${createInClausePlaceholder(scopedOrgIds)})
+          ORDER BY ca.updated_at DESC, ca.assist_no DESC
+          LIMIT 1
+        ) AS assist_payload_json,
+        (
+          SELECT ca.assist_no
+          FROM claim_assists ca
+          WHERE (ca.assist_no = ac.assist_no OR ca.related_case_no = ac.case_no)
+            AND ca.org_id IN (${createInClausePlaceholder(scopedOrgIds)})
+          ORDER BY ca.updated_at DESC, ca.assist_no DESC
+          LIMIT 1
+        ) AS linked_assist_no
+      FROM appraisal_cases ac
+      WHERE ac.org_id IN (${createInClausePlaceholder(scopedOrgIds)})
+      ORDER BY ac.report_time DESC, ac.case_no DESC
+    `)
+    .all(...scopedOrgIds, ...scopedOrgIds, ...scopedOrgIds);
   res.json({ data: rows });
 });
 

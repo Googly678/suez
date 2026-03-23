@@ -112,7 +112,7 @@ export default function ClaimsAssistance({
   ].filter((item, index, arr) => arr.findIndex((other) => other.assistNo === item.assistNo) === index);
   const [currentStep, setCurrentStep] = useState(1);
   const [showIndirectLoss, setShowIndirectLoss] = useState(false);
-  const [cargoList, setCargoList] = useState([{ id: 1, name: '', quantity: '', unit: '', price: '', amount: '', type: '' }]);
+  const [cargoList, setCargoList] = useState([{ id: 1, name: '', model: '', quantity: '', unit: '', price: '', amount: '', type: '' }]);
   const [logisticsCompanies, setLogisticsCompanies] = useState([{ id: 1, name: '' }]);
   const [accidentInfo, setAccidentInfo] = useState({
     time: '',
@@ -200,7 +200,7 @@ export default function ClaimsAssistance({
   };
 
   const addCargo = () => {
-    setCargoList([...cargoList, { id: Date.now(), name: '', quantity: '', unit: '', price: '', amount: '', type: '' }]);
+    setCargoList([...cargoList, { id: Date.now(), name: '', model: '', quantity: '', unit: '', price: '', amount: '', type: '' }]);
   };
 
   const removeCargo = (id: number) => {
@@ -853,11 +853,12 @@ export default function ClaimsAssistance({
 
             <div className="p-6 space-y-4">
               <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                <table className="w-full min-w-[1120px] table-fixed text-left border-collapse whitespace-nowrap text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                       <th className="px-4 py-2 w-16">序号</th>
-                      <th className="px-4 py-2">品名</th>
+                      <th className="px-4 py-2 w-[24%]">品名</th>
+                      <th className="px-4 py-2 w-[16%]">型号</th>
                       <th className="px-4 py-2 w-24">数量</th>
                       <th className="px-4 py-2 w-32">包装</th>
                       <th className="px-4 py-2 w-32">单价</th>
@@ -877,6 +878,15 @@ export default function ClaimsAssistance({
                             onChange={(e) => updateCargo(item.id, 'name', e.target.value)}
                             className="w-full px-2 py-1 border border-slate-200 rounded outline-none"
                             placeholder="品名"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={(item as any).model || ''}
+                            onChange={(e) => updateCargo(item.id, 'model', e.target.value)}
+                            className="w-full px-2 py-1 border border-slate-200 rounded outline-none"
+                            placeholder="型号"
                           />
                         </td>
                         <td className="px-4 py-2">

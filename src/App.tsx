@@ -349,6 +349,32 @@ type PolicyRow = {
 };
 
 const normalizeAssistRow = (row: any) => ({
+  ...(typeof row?.payload_json === 'string'
+    ? (() => {
+        try {
+          const parsed = JSON.parse(row.payload_json);
+          const source = parsed?.payload || parsed || {};
+          return {
+            cargoList: source.cargoList || [],
+            accidentInfo: source.accidentInfo || {},
+            logisticsCompanies: source.logisticsCompanies || [],
+            ownerName: source.ownerName || '',
+            truckPlateNo: source.truckPlateNo || '',
+            indirectLossList: source.indirectLossList || [],
+            showIndirectLoss: source.showIndirectLoss || false,
+            remarks: source.remarks || '',
+            accidentEvidenceFiles: source.accidentEvidenceFiles || [],
+            relationEvidenceFiles: source.relationEvidenceFiles || [],
+            vehicleEvidenceFiles: source.vehicleEvidenceFiles || [],
+            directLossEvidenceFiles: source.directLossEvidenceFiles || [],
+            indirectLossEvidenceFiles: source.indirectLossEvidenceFiles || [],
+            remarkEvidenceFiles: source.remarkEvidenceFiles || [],
+          };
+        } catch {
+          return {};
+        }
+      })()
+    : {}),
   assistNo: row.assist_no,
   relatedCaseNo: row.related_case_no || '',
   policyNo: row.policy_no,
@@ -365,22 +391,64 @@ const normalizeAssistRow = (row: any) => ({
   updatedAt: row.updated_at || '',
 });
 
-const normalizeCaseRow = (row: any) => ({
-  id: row.case_no,
-  assistNo: row.assist_no || '',
-  policyNo: row.policy_no,
-  customerCode: row.customer_code || '',
-  insured: row.insured || '',
-  company: row.company || '',
-  type: row.insurance_type || '',
-  status: row.status || '',
-  reportTime: row.report_time || '',
-  reviewDecision: row.review_decision || '',
-  reviewComment: row.review_comment || '',
-  reviewTime: row.review_time || '',
-  reporter: '理赔协助',
-  startTime: '',
-  endTime: '',
+const normalizeCaseRow = (row: any) => {
+  let payloadSource: any = {};
+  try {
+    const parsed = JSON.parse(row?.assist_payload_json || '{}');
+    payloadSource = parsed?.payload || parsed || {};
+  } catch {
+    payloadSource = {};
+  }
+
+  return {
+    id: row.case_no,
+    assistNo: row.assist_no || row.linked_assist_no || '',
+    policyNo: row.policy_no,
+    customerCode: row.customer_code || payloadSource.customerCode || '',
+    customer: payloadSource.customer || payloadSource.customerName || '',
+    insured: row.insured || payloadSource.insured || '',
+    company: row.company || payloadSource.company || '',
+    type: row.insurance_type || payloadSource.type || payloadSource.insuranceType || '',
+    status: row.status || '',
+    reportTime: row.report_time || '',
+    reviewDecision: row.review_decision || '',
+    reviewComment: row.review_comment || '',
+    reviewTime: row.review_time || '',
+    reporter: '理赔协助',
+    startTime: payloadSource.startTime || '',
+    endTime: payloadSource.endTime || '',
+    cargoList: payloadSource.cargoList || [],
+    accidentInfo: payloadSource.accidentInfo || {},
+    logisticsCompanies: payloadSource.logisticsCompanies || [],
+    ownerName: payloadSource.ownerName || '',
+    truckPlateNo: payloadSource.truckPlateNo || '',
+    indirectLossList: payloadSource.indirectLossList || [],
+    showIndirectLoss: payloadSource.showIndirectLoss || false,
+    remarks: payloadSource.remarks || '',
+    accidentEvidenceFiles: payloadSource.accidentEvidenceFiles || [],
+    relationEvidenceFiles: payloadSource.relationEvidenceFiles || [],
+    vehicleEvidenceFiles: payloadSource.vehicleEvidenceFiles || [],
+    directLossEvidenceFiles: payloadSource.directLossEvidenceFiles || [],
+    indirectLossEvidenceFiles: payloadSource.indirectLossEvidenceFiles || [],
+    remarkEvidenceFiles: payloadSource.remarkEvidenceFiles || [],
+  };
+};
+
+const getAssistDetailFields = (assist: any) => ({
+  cargoList: assist?.cargoList || [],
+  accidentInfo: assist?.accidentInfo || {},
+  logisticsCompanies: assist?.logisticsCompanies || [],
+  ownerName: assist?.ownerName || '',
+  truckPlateNo: assist?.truckPlateNo || '',
+  indirectLossList: assist?.indirectLossList || [],
+  showIndirectLoss: assist?.showIndirectLoss || false,
+  remarks: assist?.remarks || '',
+  accidentEvidenceFiles: assist?.accidentEvidenceFiles || [],
+  relationEvidenceFiles: assist?.relationEvidenceFiles || [],
+  vehicleEvidenceFiles: assist?.vehicleEvidenceFiles || [],
+  directLossEvidenceFiles: assist?.directLossEvidenceFiles || [],
+  indirectLossEvidenceFiles: assist?.indirectLossEvidenceFiles || [],
+  remarkEvidenceFiles: assist?.remarkEvidenceFiles || [],
 });
 
 const normalizePolicyRow = (row: any): PolicyRow => ({
@@ -431,6 +499,9 @@ export default function App() {
   const [activeItem, setActiveItem] = useState('我的保单');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedGroup, setExpandedGroup] = useState('保单管理');
+  const logoAiSrc = `${import.meta.env.BASE_URL}sigreal-logo.ai`;
+  const logoFullSrc = `${import.meta.env.BASE_URL}sigreal-logo.svg`;
+  const logoMarkSrc = `${import.meta.env.BASE_URL}sigreal-mark.svg`;
   const [resetKey, setResetKey] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -1146,8 +1217,11 @@ export default function App() {
       }),
     })
       .then((result) => {
+        let assistDetailFields: any = {};
         if (result?.data?.assist) {
-          upsertClaimAssist(normalizeAssistRow(result.data.assist));
+          const normalizedAssist = normalizeAssistRow(result.data.assist);
+          assistDetailFields = getAssistDetailFields(normalizedAssist);
+          upsertClaimAssist(normalizedAssist);
         }
         if (result?.data?.case) {
           setClaimsPool((prev) => {
@@ -1155,10 +1229,10 @@ export default function App() {
             const idx = prev.findIndex((item) => item.id === normalized.id);
             if (idx >= 0) {
               const next = [...prev];
-              next[idx] = { ...next[idx], ...normalized };
+              next[idx] = { ...next[idx], ...normalized, ...assistDetailFields };
               return next;
             }
-            return [...prev, normalized];
+            return [...prev, { ...normalized, ...assistDetailFields }];
           });
         }
       })
@@ -1187,12 +1261,15 @@ export default function App() {
       body: JSON.stringify({ stage: reviewStage }),
     })
       .then((result) => {
+        let assistDetailFields: any = {};
+        if (result?.data?.assist) {
+          const normalizedAssist = normalizeAssistRow(result.data.assist);
+          assistDetailFields = getAssistDetailFields(normalizedAssist);
+          upsertClaimAssist(normalizedAssist);
+        }
         if (result?.data?.case) {
           const normalizedCase = normalizeCaseRow(result.data.case);
-          setClaimsPool((prev) => prev.map((item) => (item.id === normalizedCase.id ? { ...item, ...normalizedCase } : item)));
-        }
-        if (result?.data?.assist) {
-          upsertClaimAssist(normalizeAssistRow(result.data.assist));
+          setClaimsPool((prev) => prev.map((item) => (item.id === normalizedCase.id ? { ...item, ...normalizedCase, ...assistDetailFields } : item)));
         }
       })
       .catch((error) => {
@@ -1263,12 +1340,15 @@ export default function App() {
       body: JSON.stringify({ decision, comment: appraisalData.reviewComment || '', stage: reviewStage }),
     })
       .then((result) => {
+        let assistDetailFields: any = {};
+        if (result?.data?.assist) {
+          const normalizedAssist = normalizeAssistRow(result.data.assist);
+          assistDetailFields = getAssistDetailFields(normalizedAssist);
+          upsertClaimAssist(normalizedAssist);
+        }
         if (result?.data?.case) {
           const normalizedCase = normalizeCaseRow(result.data.case);
-          setClaimsPool((prev) => prev.map((item) => (item.id === normalizedCase.id ? { ...item, ...normalizedCase } : item)));
-        }
-        if (result?.data?.assist) {
-          upsertClaimAssist(normalizeAssistRow(result.data.assist));
+          setClaimsPool((prev) => prev.map((item) => (item.id === normalizedCase.id ? { ...item, ...normalizedCase, ...assistDetailFields } : item)));
         }
       })
       .catch((error) => {
@@ -1399,16 +1479,13 @@ export default function App() {
       <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} flex-shrink-0 bg-slate-900 text-white transition-all duration-300 flex flex-col z-20 shadow-xl shadow-slate-900/20`}>
         <div className="h-16 flex items-center justify-center border-b border-slate-800 px-4 shrink-0">
           {isSidebarOpen ? (
-            <h1 className="text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-sm shadow-inner">
-                S
-              </div>
-              Suez
-            </h1>
-          ) : (
-            <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-sm shadow-inner">
-              S
+            <div className="flex w-full items-center justify-center">
+              <object data={logoAiSrc} type="application/pdf" className="h-9 w-full max-w-full overflow-hidden rounded-sm">
+                <img src={logoFullSrc} alt="SiGReal Tech" className="h-9 w-auto max-w-full object-contain" />
+              </object>
             </div>
+          ) : (
+            <img src={logoMarkSrc} alt="SiGReal" className="h-8 w-8 object-contain" />
           )}
         </div>
 
