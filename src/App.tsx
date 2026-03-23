@@ -156,21 +156,113 @@ const mockAssists = [
 const mockCases = [
   {
     id: 'CASE-2025-001', assistNo: 'ASSIST-2025-001', policyNo: 'POL-2025-001', customerCode: 'SF001',
-    insured: '顺丰速运', company: '顺丰速运有限公司', type: '货物运输险', status: '定损协议通过',
+    insured: '顺丰速运', company: '中国太平洋保险', type: '货物运输险', status: '定损协议通过',
     reportTime: '2025-08-01', reviewDecision: '通过', reviewComment: '损失属实，赔付¥5,200。',
-    reviewTime: '2025-08-20', reporter: '理赔协助', startTime: '', endTime: '',
+    reviewTime: '2025-08-20', reporter: '理赔协助', startTime: '2025-01-01', endTime: '2026-01-01',
+    // 理赔录入详情（模拟预填）
+    cargoList: [
+      { id: 1, name: '电子元器件', quantity: '200', unit: '纸箱', price: '18', amount: '3600', type: '报废' },
+      { id: 2, name: '精密仪器', quantity: '5', unit: '木箱', price: '320', amount: '1600', type: '贬值折价' },
+    ],
+    accidentInfo: {
+      time: '2025-07-28 14:30',
+      reportTime: '2025-08-01 09:30',
+      reportNo: 'RPT-2025-0801-001',
+      departureProvince: '广东省', departureCity: '深圳市',
+      destinationProvince: '上海市', destinationCity: '上海市',
+      province: '浙江省', city: '杭州市', district: '', address: '沪杭高速杭州段',
+      reason1: '交通事故', reason2: '两车或多车事故',
+      description: '2025年7月28日下午，承运车辆在沪杭高速与大货车追尾，导致箱内精密仪器及电子元器件受损。'
+    },
+    ownerName: '顺丰速运有限公司',
+    logisticsCompanies: [{ id: 1, name: '浙江顺通物流有限公司' }],
+    truckPlateNo: '浙A88388',
+    indirectLossList: [{ id: 1, amount: '800', item: '人工费', note: '装卸重新包装费用' }],
+    showIndirectLoss: true,
+    remarks: '已由司机出具事故证明，并附保单正本。',
+    // 公估录入详情（模拟预填）
+    surveyPeriod: '2025-08-05 至 2025-08-10',
+    surveyInitiator: '李公估',
+    surveyContact: '15900001234',
+    surveyLocation: '浙江省杭州市西湖区公司仓库',
+    surveySummary: '现场查勘确认，电子元器件受损200箱，精密仪器受损5台，损失属实，建议按报废及贬值分别核损。',
+    surveyRows: [
+      { id: 1, itemName: '电子元器件', quantity: '200', packageType: '纸箱', lossDesc: '外箱破损，内芯受潮报废', voucher: '照片×12张' },
+      { id: 2, itemName: '精密仪器', quantity: '5', packageType: '木箱', lossDesc: '撞击变形，功能失效，折价30%', voucher: '鉴定报告×1份' },
+    ],
+    guideRows: [
+      { id: 1, date: '2025-08-06', feedback: '已确认货损情况', note: '货主到场签字' },
+      { id: 2, date: '2025-08-10', feedback: '理算金额已与货主协商一致', note: '' },
+    ],
   },
   {
     id: 'CASE-2025-002', assistNo: 'ASSIST-2025-002', policyNo: 'POL-2025-002', customerCode: 'DD002',
-    insured: '滴滴出行', company: '滴滴出行科技有限公司', type: '商用车险', status: '审核中',
+    insured: '滴滴出行', company: '人保财险', type: '商用车险', status: '审核中',
     reportTime: '2025-10-10', reviewDecision: '', reviewComment: '', reviewTime: '',
-    reporter: '理赔协助', startTime: '', endTime: '',
+    reporter: '理赔协助', startTime: '2025-03-01', endTime: '2026-03-01',
+    // 理赔录入详情
+    cargoList: [
+      { id: 1, name: '车辆前保险杠', quantity: '1', unit: '裸装(含缠绕膜)', price: '4200', amount: '4200', type: '更换包装' },
+      { id: 2, name: '左前大灯总成', quantity: '1', unit: '纸箱', price: '3800', amount: '3800', type: '报废' },
+    ],
+    accidentInfo: {
+      time: '2025-10-08 08:15',
+      reportTime: '2025-10-10 11:00',
+      reportNo: 'RPT-2025-1010-002',
+      departureProvince: '北京市', departureCity: '北京市',
+      destinationProvince: '北京市', destinationCity: '北京市',
+      province: '北京市', city: '北京市', district: '', address: '四环辅路',
+      reason1: '交通事故', reason2: '两车或多车事故',
+      description: '车辆在四环辅路行驶时被追尾，前保险杠及左前大灯损坏，已联系交警出具交通事故认定书。'
+    },
+    ownerName: '滴滴出行科技有限公司',
+    logisticsCompanies: [{ id: 1, name: '北京快运物流有限公司' }],
+    truckPlateNo: '京A12345',
+    indirectLossList: [],
+    showIndirectLoss: false,
+    remarks: '已提交交通事故认定书及维修报价单。',
+    // 公估录入详情
+    surveyPeriod: '2025-10-12',
+    surveyInitiator: '王公估',
+    surveyContact: '13800008888',
+    surveyLocation: '北京市朝阳区4S店',
+    surveySummary: '现场查勘确认，前保险杠及大灯损坏属实，维修报价经核定合理。',
+    surveyRows: [
+      { id: 1, itemName: '前保险杠', quantity: '1', packageType: '裸装(含缠绕膜)', lossDesc: '碰损变形，需整体更换', voucher: '维修报价单×1' },
+      { id: 2, itemName: '左前大灯总成', quantity: '1', packageType: '纸箱', lossDesc: '撞击碎裂，报废处理', voucher: '照片×6张' },
+    ],
+    guideRows: [
+      { id: 1, date: '2025-10-12', feedback: '已确认损失情况并核定维修金额', note: '驾驶员到场说明' },
+    ],
   },
   {
     id: 'CASE-2025-003', assistNo: '', policyNo: 'POL-2025-001', customerCode: 'SF001',
-    insured: '顺丰速运', company: '顺丰速运有限公司', type: '货物运输险', status: '公估中',
+    insured: '顺丰速运', company: '中国太平洋保险', type: '货物运输险', status: '公估中',
     reportTime: '2025-09-15', reviewDecision: '', reviewComment: '', reviewTime: '',
-    reporter: '理赔协助', startTime: '', endTime: '',
+    reporter: '理赔协助', startTime: '2025-01-01', endTime: '2026-01-01',
+    // 理赔录入详情
+    cargoList: [
+      { id: 1, name: '冷冻生鲜（三文鱼）', quantity: '500', unit: '编织袋', price: '120', amount: '60000', type: '报废' },
+    ],
+    accidentInfo: {
+      time: '2025-09-13 03:00',
+      reportTime: '2025-09-15 08:00',
+      reportNo: 'RPT-2025-0915-001',
+      departureProvince: '广东省', departureCity: '广州市',
+      destinationProvince: '北京市', destinationCity: '北京市',
+      province: '河北省', city: '石家庄市', district: '', address: '京港澳高速石家庄段',
+      reason1: '水湿', reason2: '非运输途中雨淋',
+      description: '冷链运输车辆制冷设备于途中故障，司机未及时发现，导致三文鱼全部变质报废，损失约¥60,000。'
+    },
+    ownerName: '顺丰速运有限公司',
+    logisticsCompanies: [{ id: 1, name: '广东冷链物流有限公司' }, { id: 2, name: '华北冷链运输有限公司' }],
+    truckPlateNo: '粤B99999',
+    indirectLossList: [{ id: 1, amount: '2000', item: '提运费', note: '销毁运费' }],
+    showIndirectLoss: true,
+    remarks: '冷链温控记录已提交，制冷设备故障原因正在鉴定中。',
+    // 公估录入尚未填写（公估中阶段）
+    surveyPeriod: '', surveyInitiator: '', surveyContact: '', surveyLocation: '', surveySummary: '',
+    surveyRows: [], guideRows: [],
   },
 ];
 
@@ -1024,6 +1116,15 @@ export default function App() {
           reporter: '理赔协助',
           reportTime: submittedAssist.reportTime,
           status: '已提交',
+          // 理赔录入详情字段，供公估/保司汇总页读取
+          cargoList: submittedAssist.cargoList || [],
+          accidentInfo: submittedAssist.accidentInfo || {},
+          logisticsCompanies: submittedAssist.logisticsCompanies || [],
+          ownerName: submittedAssist.ownerName || '',
+          truckPlateNo: submittedAssist.truckPlateNo || '',
+          indirectLossList: submittedAssist.indirectLossList || [],
+          showIndirectLoss: submittedAssist.showIndirectLoss || false,
+          remarks: submittedAssist.remarks || '',
         },
       ];
     });

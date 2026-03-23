@@ -34,19 +34,22 @@ export default function AppraisalClaims({
     reportDateFrom: '',
     reportDateTo: '',
   });
-  const [surveyRows, setSurveyRows] = useState([
-    { id: 1, itemName: '', quantity: '', packageType: '', unitPrice: '', lossDesc: '', voucher: '' },
+  const [surveyBlocks, setSurveyBlocks] = useState([
+    {
+      id: 1,
+      period: '',
+      initiator: '',
+      contact: '',
+      location: '',
+      rows: [{ id: 1, itemName: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }],
+      summary: '',
+      imageCount: 0,
+      notebookCount: 0,
+    },
   ]);
   const [claimRows] = useState([
     { id: 1, itemName: '电子设备', quantity: '50', packageType: '纸箱', unitPrice: '1000', claimAmount: '50000', claimType: '报废', appraisalOpinion: '同意按报废核损' },
   ]);
-  const [surveySummary, setSurveySummary] = useState('');
-  const [surveyPeriod, setSurveyPeriod] = useState('');
-  const [surveyInitiator, setSurveyInitiator] = useState('');
-  const [surveyContact, setSurveyContact] = useState('');
-  const [surveyLocation, setSurveyLocation] = useState('');
-  const [surveyEvidenceCount, setSurveyEvidenceCount] = useState(0);
-  const [surveySummaryEvidenceCount, setSurveySummaryEvidenceCount] = useState(0);
   const [insurerOpinion, setInsurerOpinion] = useState('');
   const [guideRows, setGuideRows] = useState([
     { id: 1, date: '', feedback: '', note: '' },
@@ -54,10 +57,12 @@ export default function AppraisalClaims({
   const [insurerAuditRows, setInsurerAuditRows] = useState([
     { id: 1, date: '', opinion: '', note: '' },
   ]);
+  const [detailAttachmentCount, setDetailAttachmentCount] = useState(0);
   const [reportPreview, setReportPreview] = useState('');
   const [insurerActionMessage, setInsurerActionMessage] = useState('');
-  const surveyEvidenceInputRef = React.useRef<HTMLInputElement>(null);
-  const surveySummaryEvidenceInputRef = React.useRef<HTMLInputElement>(null);
+  const [appraisalReportPreview, setAppraisalReportPreview] = useState('');
+  const [appraisalActionMessage, setAppraisalActionMessage] = useState('');
+  const detailAttachmentInputRef = React.useRef<HTMLInputElement>(null);
   const stageConfig =
     reviewStage === 'insurer'
       ? {
@@ -139,20 +144,46 @@ export default function AppraisalClaims({
     return 'bg-slate-100 text-slate-700';
   };
 
-  const addSurveyRow = () => {
-    setSurveyRows((prev) => [...prev, { id: Date.now(), itemName: '', quantity: '', packageType: '', unitPrice: '', lossDesc: '', voucher: '' }]);
+  const createEmptySurveyBlock = (id: number) => ({
+    id,
+    period: '',
+    initiator: '',
+    contact: '',
+    location: '',
+    rows: [{ id: Date.now(), itemName: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }],
+    summary: '',
+    imageCount: 0,
+    notebookCount: 0,
+  });
+
+  const addSurveyBlock = () => {
+    setSurveyBlocks((prev) => [...prev, createEmptySurveyBlock(Date.now())]);
   };
 
-  const updateSurveyRow = (id: number, field: string, value: string) => {
-    setSurveyRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+  const removeSurveyBlock = (blockId: number) => {
+    setSurveyBlocks((prev) => prev.filter((b) => b.id !== blockId));
   };
 
-  const appendSurveyEvidence = (event: React.ChangeEvent<HTMLInputElement>, setCount: React.Dispatch<React.SetStateAction<number>>) => {
-    const count = event.target.files?.length || 0;
-    if (count > 0) {
-      setCount((prev) => prev + count);
-    }
-    event.target.value = '';
+  const updateBlock = (blockId: number, field: string, value: string) => {
+    setSurveyBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, [field]: value } : b)));
+  };
+
+  const addRowToBlock = (blockId: number) => {
+    setSurveyBlocks((prev) =>
+      prev.map((b) =>
+        b.id === blockId
+          ? { ...b, rows: [...b.rows, { id: Date.now(), itemName: '', quantity: '', packageType: '', lossDesc: '', voucher: '' }] }
+          : b,
+      ),
+    );
+  };
+
+  const updateRowInBlock = (blockId: number, rowId: number, field: string, value: string) => {
+    setSurveyBlocks((prev) =>
+      prev.map((b) =>
+        b.id === blockId ? { ...b, rows: b.rows.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)) } : b,
+      ),
+    );
   };
 
   const addGuideRow = () => {
@@ -205,10 +236,116 @@ export default function AppraisalClaims({
     URL.revokeObjectURL(url);
   };
 
+  const buildAppraisalReport = () => {
+    const today = getToday();
+    const lines: string[] = [];
+    lines.push('═══════════════════════════════════════════');
+    lines.push('            公  估  理  赔  报  告');
+    lines.push('═══════════════════════════════════════════');
+    lines.push(`报告日期：${today}`);
+    lines.push('');
+    lines.push('【案件基本信息】');
+    lines.push(`案件编号：${selectedCase?.id || '--'}`);
+    lines.push(`保单号：${selectedCase?.policyNo || '--'}`);
+    lines.push(`被保险人：${selectedCase?.insured || '--'}`);
+    lines.push(`保险公司：${selectedCase?.company || '--'}`);
+    lines.push(`险种：${selectedCase?.type || '--'}`);
+    lines.push(`报案时间：${selectedCase?.reportTime || '--'}`);
+    lines.push('');
+
+    surveyBlocks.forEach((block, blockIdx) => {
+      lines.push(`【查勘历史 第${blockIdx + 1}次】`);
+      lines.push(`查勘日期：${block.period || '--'}`);
+      lines.push(`现场查勘人：${block.initiator || '--'}`);
+      lines.push(`联系方式：${block.contact || '--'}`);
+      lines.push(`查勘地点：${block.location || '--'}`);
+      lines.push('  货损明细：');
+      const hasRows = block.rows.some((r) => r.itemName);
+      if (!hasRows) {
+        lines.push('  （暂无明细）');
+      } else {
+        block.rows.forEach((row, idx) => {
+          if (!row.itemName) return;
+          lines.push(`    ${idx + 1}. 品名：${row.itemName}  数量：${row.quantity || '--'}  包装：${row.packageType || '--'}`);
+          lines.push(`       货损状态：${row.lossDesc || '--'}`);
+          if (row.voucher) lines.push(`       佐证：${row.voucher}`);
+        });
+      }
+      lines.push(`  查勘已况：${block.summary || '（暂未填写）'}`);
+      lines.push(`  图片佐证：${block.imageCount} 份  勘办笔录：${block.notebookCount} 份`);
+      lines.push('');
+    });
+
+    lines.push('【保险公司认定意见】');
+    lines.push(insurerOpinion || '（暂未填写）');
+    lines.push('');
+    const hasGuide = guideRows.some((r) => r.date || r.feedback);
+    if (hasGuide) {
+      lines.push('【理赔引导记录】');
+      guideRows.forEach((row, idx) => {
+        if (row.date || row.feedback) {
+          lines.push(`  ${idx + 1}. ${row.date || '--'}  ${row.feedback || '--'}${row.note ? '  备注：' + row.note : ''}`);
+        }
+      });
+      lines.push('');
+    }
+    lines.push('═══════════════════════════════════════════');
+    return lines.join('\n');
+  };
+
+  const handleGenerateAppraisalReport = () => {
+    const content = buildAppraisalReport();
+    setAppraisalReportPreview(content);
+    setAppraisalActionMessage('已生成公估报告预览，文件已自动下载。');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `公估理赔报告_${selectedCase?.id || '未命名'}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const appendDetailAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const count = event.target.files?.length || 0;
+    if (count > 0) {
+      setDetailAttachmentCount((prev) => prev + count);
+      setInsurerActionMessage(`已上传附件 ${count} 份。`);
+    }
+    event.target.value = '';
+  };
+
   useEffect(() => {
     if (initialSelectedCase) {
       setSelectedCase(initialSelectedCase);
       setReviewComment(initialSelectedCase.reviewComment || '');
+      // 同步查勘历史数据
+      if (initialSelectedCase.surveyBlocks?.length) {
+        setSurveyBlocks(initialSelectedCase.surveyBlocks);
+      } else if (initialSelectedCase.surveyPeriod || initialSelectedCase.surveyRows?.length) {
+        // 兼容旧格式：将旧字段转为一个查勘块
+        setSurveyBlocks([{
+          id: 1,
+          period: initialSelectedCase.surveyPeriod || '',
+          initiator: initialSelectedCase.surveyInitiator || '',
+          contact: initialSelectedCase.surveyContact || '',
+          location: initialSelectedCase.surveyLocation || '',
+          rows: (initialSelectedCase.surveyRows || []).map((r: any, i: number) => ({
+            id: r.id || i + 1,
+            itemName: r.itemName || '',
+            quantity: r.quantity || '',
+            packageType: r.packageType || '',
+            lossDesc: r.lossDesc || '',
+            voucher: r.voucher || '',
+          })),
+          summary: initialSelectedCase.surveySummary || '',
+          imageCount: 0,
+          notebookCount: 0,
+        }]);
+      }
+      if (initialSelectedCase.guideRows?.length) setGuideRows(initialSelectedCase.guideRows);
       onInitialSelectedCaseConsumed?.();
     }
   }, [initialSelectedCase, onInitialSelectedCaseConsumed]);
@@ -276,101 +413,176 @@ export default function AppraisalClaims({
             </section>
 
             <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              {/* 理赔录入汇总：直接从 selectedCase.cargoList 读取，由理赔协助提交时写入 */}
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">理赔录入信息汇总（只读）</h3>
                 <div className="text-xs text-slate-500">
-                  报损总额：
-                  {claimRows
-                    .reduce((sum, row) => sum + (Number(row.claimAmount) || 0), 0)
-                    .toLocaleString('zh-CN')}
+                  报损总额：¥
+                  {(selectedCase.cargoList || []).reduce((sum: number, row: any) => sum + (Number(row.amount) || 0), 0).toLocaleString('zh-CN')}
                 </div>
               </div>
               <div className="p-6">
-                <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                  <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                        <th className="px-4 py-2 w-14">序号</th>
-                        <th className="px-4 py-2">品名</th>
-                        <th className="px-4 py-2 w-20">数量</th>
-                        <th className="px-4 py-2 w-20">包装</th>
-                        <th className="px-4 py-2 w-24">单价</th>
-                        <th className="px-4 py-2 w-28">报损金额</th>
-                        <th className="px-4 py-2 w-28">报损类型</th>
-                        <th className="px-4 py-2">核定意见</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {claimRows.map((row) => (
-                        <tr key={row.id}>
-                          <td className="px-4 py-2 text-slate-500">{row.id}</td>
-                          <td className="px-4 py-2 text-slate-800">{row.itemName}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.quantity}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.packageType}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.unitPrice}</td>
-                          <td className="px-4 py-2 text-rose-600">{row.claimAmount}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.claimType}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.appraisalOpinion}</td>
+                {(selectedCase.cargoList || []).length === 0 ? (
+                  <div className="text-sm text-slate-400 text-center py-6">暂无理赔录入货损明细</div>
+                ) : (
+                  <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                          <th className="px-4 py-2 w-14">序号</th>
+                          <th className="px-4 py-2">品名</th>
+                          <th className="px-4 py-2 w-20">数量</th>
+                          <th className="px-4 py-2 w-20">包装</th>
+                          <th className="px-4 py-2 w-24">单价</th>
+                          <th className="px-4 py-2 w-28">报损金额</th>
+                          <th className="px-4 py-2 w-28">报损类型</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(selectedCase.cargoList || []).map((row: any, index: number) => (
+                          <tr key={row.id || index}>
+                            <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                            <td className="px-4 py-2 text-slate-800">{row.name || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.unit || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.price || '--'}</td>
+                            <td className="px-4 py-2 text-rose-600">{row.amount || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.type || '--'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {selectedCase.indirectLossList?.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-xs font-semibold text-slate-600 mb-2">间接损失</div>
+                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                      <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                            <th className="px-4 py-2 w-14">序号</th>
+                            <th className="px-4 py-2 w-40">损失金额</th>
+                            <th className="px-4 py-2 w-40">损失项目</th>
+                            <th className="px-4 py-2">损失说明</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(selectedCase.indirectLossList || []).map((row: any, index: number) => (
+                            <tr key={row.id || index}>
+                              <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.amount || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.item || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.note || '--'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {selectedCase.accidentInfo && (
+                  <div className="mt-4 grid grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
+                    <div><span className="text-xs text-slate-500">事故原因：</span><span className="text-slate-800">{[selectedCase.accidentInfo.reason1, selectedCase.accidentInfo.reason2].filter(Boolean).join(' / ') || '--'}</span></div>
+                    <div><span className="text-xs text-slate-500">出险时间：</span><span className="text-slate-800">{selectedCase.accidentInfo.time || '--'}</span></div>
+                    <div><span className="text-xs text-slate-500">报案号：</span><span className="text-slate-800">{selectedCase.accidentInfo.reportNo || '--'}</span></div>
+                    <div><span className="text-xs text-slate-500">出险地点：</span><span className="text-slate-800">{[selectedCase.accidentInfo.province, selectedCase.accidentInfo.city, selectedCase.accidentInfo.address].filter(Boolean).join(' ') || '--'}</span></div>
+                  </div>
+                )}
               </div>
             </section>
 
             <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              {/* 公估录入汇总：优先读取 surveyBlocks，兼容旧格式 */}
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="text-lg font-semibold text-slate-900">公估录入信息汇总（只读）</h3>
+                <h3 className="text-lg font-semibold text-slate-900">查勘历史（只读）</h3>
               </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">查勘日期</div>
-                    <div className="font-medium text-slate-900">{surveyPeriod || '--'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">现场查勘人</div>
-                    <div className="font-medium text-slate-900">{surveyInitiator || '--'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">联系方式</div>
-                    <div className="font-medium text-slate-900">{surveyContact || '--'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">查勘地点</div>
-                    <div className="font-medium text-slate-900">{surveyLocation || '--'}</div>
-                  </div>
-                </div>
-                <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                  <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                        <th className="px-4 py-2 w-14">序号</th>
-                        <th className="px-4 py-2">品名</th>
-                        <th className="px-4 py-2 w-24">数量</th>
-                        <th className="px-4 py-2 w-32">包装</th>
-                        <th className="px-4 py-2 w-40">货损状态说明</th>
-                        <th className="px-4 py-2 w-28">佐证</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {surveyRows.map((row, index) => (
-                        <tr key={row.id}>
-                          <td className="px-4 py-2 text-slate-500">{index + 1}</td>
-                          <td className="px-4 py-2 text-slate-800">{row.itemName || '--'}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.packageType || '--'}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.lossDesc || '--'}</td>
-                          <td className="px-4 py-2 text-slate-700">{row.voucher || '--'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="text-xs text-slate-500">
-                  查勘已况：{surveySummary || '--'}
-                </div>
+              <div className="p-6 space-y-6">
+                {(() => {
+                  // 兼容：优先 surveyBlocks；兼容旧字段
+                  const displayBlocks: Array<{
+                    id: number; period: string; initiator: string; contact: string;
+                    location: string; rows: any[]; summary: string; imageCount: number; notebookCount: number;
+                  }> = selectedCase.surveyBlocks?.length
+                    ? selectedCase.surveyBlocks
+                    : (selectedCase.surveyPeriod || selectedCase.surveyRows?.length)
+                      ? [{
+                          id: 1,
+                          period: selectedCase.surveyPeriod || '',
+                          initiator: selectedCase.surveyInitiator || '',
+                          contact: selectedCase.surveyContact || '',
+                          location: selectedCase.surveyLocation || '',
+                          rows: selectedCase.surveyRows || [],
+                          summary: selectedCase.surveySummary || '',
+                          imageCount: 0,
+                          notebookCount: 0,
+                        }]
+                      : [];
+                  if (displayBlocks.length === 0) {
+                    return <div className="text-sm text-slate-400 text-center py-4">暂无查勘记录</div>;
+                  }
+                  return displayBlocks.map((block, blockIdx) => (
+                    <div key={block.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                      <div className="flex items-center px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                        <span className="text-sm font-semibold text-slate-700">查勘记录 #{blockIdx + 1}</span>
+                      </div>
+                      <div className="p-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">查勘日期</div>
+                            <div className="font-medium text-slate-900">{block.period || '--'}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">现场查勘人</div>
+                            <div className="font-medium text-slate-900">{block.initiator || '--'}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">联系方式</div>
+                            <div className="font-medium text-slate-900">{block.contact || '--'}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500 mb-1">查勘地点</div>
+                            <div className="font-medium text-slate-900">{block.location || '--'}</div>
+                          </div>
+                        </div>
+                        {(block.rows || []).length === 0 ? (
+                          <div className="text-sm text-slate-400 text-center py-3">暂无货损明细</div>
+                        ) : (
+                          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                              <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                                  <th className="px-4 py-2 w-14">序号</th>
+                                  <th className="px-4 py-2">品名</th>
+                                  <th className="px-4 py-2 w-24">数量</th>
+                                  <th className="px-4 py-2 w-32">包装</th>
+                                  <th className="px-4 py-2 w-40">货损状态说明</th>
+                                  <th className="px-4 py-2 w-28">佐证</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {block.rows.map((row: any, rowIdx: number) => (
+                                  <tr key={row.id || rowIdx}>
+                                    <td className="px-4 py-2 text-slate-500">{rowIdx + 1}</td>
+                                    <td className="px-4 py-2 text-slate-800">{row.itemName || '--'}</td>
+                                    <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
+                                    <td className="px-4 py-2 text-slate-700">{row.packageType || '--'}</td>
+                                    <td className="px-4 py-2 text-slate-700">{row.lossDesc || '--'}</td>
+                                    <td className="px-4 py-2 text-slate-700">{row.voucher || '--'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        {block.summary && (
+                          <div className="text-xs text-slate-500">查勘已况：{block.summary}</div>
+                        )}
+                        <div className="text-xs text-slate-500">图片 {block.imageCount} 份  勘办笔录 {block.notebookCount} 份</div>
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
             </section>
 
@@ -479,14 +691,6 @@ export default function AppraisalClaims({
               </div>
             ) : null}
 
-            <button
-              type="button"
-              onClick={handleGenerateInsurerReport}
-              disabled={!isReviewEditable}
-              className="px-6 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            >
-              一键生成理赔报告
-            </button>
           </div>
 
           <aside className="rounded-xl border border-rose-300 bg-white p-4 text-sm text-slate-600 min-h-[220px]">
@@ -498,6 +702,55 @@ export default function AppraisalClaims({
               className="h-[260px] w-full resize-none rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700"
             />
           </aside>
+        </div>
+
+        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex flex-wrap justify-between items-center px-6 lg:px-8 gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => detailAttachmentInputRef.current?.click()}
+              disabled={!isReviewEditable}
+              className="px-4 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              上传附件
+            </button>
+            <input
+              ref={detailAttachmentInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={appendDetailAttachment}
+            />
+            <button
+              type="button"
+              onClick={() => setInsurerActionMessage(`当前已上传附件 ${detailAttachmentCount} 份。`)}
+              className="px-4 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50"
+            >
+              查看附件
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleGenerateInsurerReport}
+              disabled={!isReviewEditable}
+              className="px-4 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              一键生成理赔报告
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCase({ ...selectedCase, reviewDecision: selectedCase.reviewDecision || 'approve' });
+                setShowReviewConfirm(true);
+              }}
+              disabled={!isReviewEditable}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              提交
+            </button>
+          </div>
         </div>
 
         {showReviewConfirm && (
@@ -586,13 +839,15 @@ export default function AppraisalClaims({
         </div>
 
         {/* Content */}
-        <div className="flex-1 space-y-6 pb-24 mt-4">
+        <div className="flex-1 mt-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 pb-24">
+        <div className="space-y-6">
+          {/* 查勘历史 — 多块 */}
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">查勘分</h3>
+              <h3 className="text-lg font-semibold text-slate-900">查勘历史</h3>
               <button
                 type="button"
-                onClick={addSurveyRow}
+                onClick={addSurveyBlock}
                 disabled={!isReviewEditable}
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
@@ -600,138 +855,180 @@ export default function AppraisalClaims({
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">查勘日期</label>
-                  <input
-                    type="text"
-                    value={surveyPeriod}
-                    onChange={(e) => setSurveyPeriod(e.target.value)}
-                    placeholder="例如 2026-03-20"
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
-                    disabled={!isReviewEditable}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">现场查勘人</label>
-                  <input
-                    type="text"
-                    value={surveyInitiator}
-                    onChange={(e) => setSurveyInitiator(e.target.value)}
-                    placeholder="姓名"
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
-                    disabled={!isReviewEditable}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-600 mb-1">联系方式</label>
-                  <input
-                    type="text"
-                    value={surveyContact}
-                    onChange={(e) => setSurveyContact(e.target.value)}
-                    placeholder="手机号"
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
-                    disabled={!isReviewEditable}
-                  />
-                </div>
-                <div className="md:col-span-2 xl:col-span-2">
-                  <label className="block text-xs text-slate-600 mb-1">查勘地点</label>
-                  <input
-                    type="text"
-                    value={surveyLocation}
-                    onChange={(e) => setSurveyLocation(e.target.value)}
-                    placeholder="详细地点"
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
-                    disabled={!isReviewEditable}
-                  />
-                </div>
-              </div>
+            <div className="p-6 space-y-6">
+              {surveyBlocks.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-4">暂无查勘记录，点击"添加查勘"新增一次查勘。</p>
+              )}
+              {surveyBlocks.map((block, blockIdx) => (
+                <div key={block.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                  {/* 块标题 */}
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                    <span className="text-sm font-semibold text-slate-700">查勘记录 #{blockIdx + 1}</span>
+                    {isReviewEditable && surveyBlocks.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeSurveyBlock(block.id)}
+                        className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
+                      >
+                        删除
+                      </button>
+                    )}
+                  </div>
 
-              <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                      <th className="px-4 py-2 w-14">序号</th>
-                      <th className="px-4 py-2">品名</th>
-                      <th className="px-4 py-2 w-24">数量</th>
-                      <th className="px-4 py-2 w-32">包装</th>
-                      <th className="px-4 py-2 w-32">货损状态说明</th>
-                      <th className="px-4 py-2 w-28">佐证</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {surveyRows.map((row, index) => (
-                      <tr key={row.id}>
-                        <td className="px-4 py-2 text-slate-500">{index + 1}</td>
-                        <td className="px-4 py-2">
-                          <input value={row.itemName} onChange={(e) => updateSurveyRow(row.id, 'itemName', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input value={row.quantity} onChange={(e) => updateSurveyRow(row.id, 'quantity', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input value={row.packageType} onChange={(e) => updateSurveyRow(row.id, 'packageType', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input value={row.lossDesc} onChange={(e) => updateSurveyRow(row.id, 'lossDesc', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input value={row.voucher} onChange={(e) => updateSurveyRow(row.id, 'voucher', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="文件名" />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  <div className="p-4 space-y-4">
+                    {/* 基本信息 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-xs text-slate-600 mb-1">查勘日期</label>
+                        <input
+                          type="text"
+                          value={block.period}
+                          onChange={(e) => updateBlock(block.id, 'period', e.target.value)}
+                          placeholder="例如 2026-03-20"
+                          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                          disabled={!isReviewEditable}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-600 mb-1">现场查勘人</label>
+                        <input
+                          type="text"
+                          value={block.initiator}
+                          onChange={(e) => updateBlock(block.id, 'initiator', e.target.value)}
+                          placeholder="姓名"
+                          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                          disabled={!isReviewEditable}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-600 mb-1">联系方式</label>
+                        <input
+                          type="text"
+                          value={block.contact}
+                          onChange={(e) => updateBlock(block.id, 'contact', e.target.value)}
+                          placeholder="手机号"
+                          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                          disabled={!isReviewEditable}
+                        />
+                      </div>
+                      <div className="md:col-span-2 xl:col-span-1">
+                        <label className="block text-xs text-slate-600 mb-1">查勘地点</label>
+                        <input
+                          type="text"
+                          value={block.location}
+                          onChange={(e) => updateBlock(block.id, 'location', e.target.value)}
+                          placeholder="详细地点"
+                          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                          disabled={!isReviewEditable}
+                        />
+                      </div>
+                    </div>
 
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="block text-xs text-slate-600 mb-1">查勘已况</label>
-                  <textarea
-                    rows={4}
-                    value={surveySummary}
-                    onChange={(e) => setSurveySummary(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
-                    disabled={!isReviewEditable}
-                  />
+                    {/* 货损明细表 */}
+                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                      <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                            <th className="px-4 py-2 w-14">序号</th>
+                            <th className="px-4 py-2">品名</th>
+                            <th className="px-4 py-2 w-24">数量</th>
+                            <th className="px-4 py-2 w-32">包装</th>
+                            <th className="px-4 py-2 w-40">货损状态说明</th>
+                            <th className="px-4 py-2 w-28">佐证</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {block.rows.map((row, rowIdx) => (
+                            <tr key={row.id}>
+                              <td className="px-4 py-2 text-slate-500">{rowIdx + 1}</td>
+                              <td className="px-4 py-2">
+                                <input value={row.itemName} onChange={(e) => updateRowInBlock(block.id, row.id, 'itemName', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input value={row.quantity} onChange={(e) => updateRowInBlock(block.id, row.id, 'quantity', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input value={row.packageType} onChange={(e) => updateRowInBlock(block.id, row.id, 'packageType', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input value={row.lossDesc} onChange={(e) => updateRowInBlock(block.id, row.id, 'lossDesc', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input value={row.voucher} onChange={(e) => updateRowInBlock(block.id, row.id, 'voucher', e.target.value)} disabled={!isReviewEditable} className="w-full px-2 py-1 border border-slate-200 rounded" placeholder="文件名" />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {isReviewEditable && (
+                      <button
+                        type="button"
+                        onClick={() => addRowToBlock(block.id)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> 添加货损行
+                      </button>
+                    )}
+
+                    {/* 查勘已况 */}
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">查勘已况</label>
+                      <textarea
+                        rows={3}
+                        value={block.summary}
+                        onChange={(e) => updateBlock(block.id, 'summary', e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
+                        disabled={!isReviewEditable}
+                      />
+                    </div>
+
+                    {/* 附件上传 */}
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <button
+                        type="button"
+                        disabled={!isReviewEditable}
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.multiple = true;
+                          input.onchange = (ev) => {
+                            const files = (ev.target as HTMLInputElement).files;
+                            if (files?.length) {
+                              setSurveyBlocks((prev) => prev.map((b) => b.id === block.id ? { ...b, imageCount: b.imageCount + files.length } : b));
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="px-3 py-1.5 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        上传图片
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!isReviewEditable}
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.multiple = true;
+                          input.onchange = (ev) => {
+                            const files = (ev.target as HTMLInputElement).files;
+                            if (files?.length) {
+                              setSurveyBlocks((prev) => prev.map((b) => b.id === block.id ? { ...b, notebookCount: b.notebookCount + files.length } : b));
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="px-3 py-1.5 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        上传勘办笔录
+                      </button>
+                      <span>图片 {block.imageCount} 份</span>
+                      <span>勘办笔录 {block.notebookCount} 份</span>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => surveySummaryEvidenceInputRef.current?.click()}
-                  disabled={!isReviewEditable}
-                  className="px-4 py-2 text-sm border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                >
-                  上传勘办笔录
-                </button>
-                <input
-                  ref={surveySummaryEvidenceInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => appendSurveyEvidence(e, setSurveySummaryEvidenceCount)}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-4 text-xs text-slate-500">
-                <button
-                  type="button"
-                  onClick={() => surveyEvidenceInputRef.current?.click()}
-                  disabled={!isReviewEditable}
-                  className="px-3 py-1.5 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                >
-                  图片上传
-                </button>
-                <input
-                  ref={surveyEvidenceInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => appendSurveyEvidence(e, setSurveyEvidenceCount)}
-                />
-                <span>图片 {surveyEvidenceCount} 份</span>
-                <span>勘办笔录 {surveySummaryEvidenceCount} 份</span>
-              </div>
+              ))}
             </div>
           </section>
 
@@ -857,10 +1154,38 @@ export default function AppraisalClaims({
               </div>
             </div>
           </section>
-        </div>
+        </div> {/* end left column */}
+
+          {/* Right: Report Preview Aside */}
+          <aside className="rounded-xl border border-blue-200 bg-white p-4 text-sm text-slate-600 flex flex-col gap-3">
+            <div className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5 text-blue-500" />
+              公估报告预览
+            </div>
+            <textarea
+              value={appraisalReportPreview}
+              readOnly
+              placeholder="点击底部「一键生成公估报告」后，此处展示预览并自动下载 txt 文件。"
+              className="flex-1 min-h-[300px] resize-none rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 leading-relaxed font-mono"
+            />
+            {appraisalActionMessage && (
+              <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                {appraisalActionMessage}
+              </div>
+            )}
+          </aside>
+        </div> {/* end grid */}
 
         {/* Bottom Toolbar */}
-        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-between items-center px-6 lg:px-8 gap-4">
+        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex flex-wrap justify-between items-center px-6 lg:px-8 gap-4">
+          <button
+            type="button"
+            onClick={handleGenerateAppraisalReport}
+            disabled={!isReviewEditable}
+            className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
+          >
+            一键生成公估报告
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -868,16 +1193,9 @@ export default function AppraisalClaims({
               setShowReviewConfirm(true);
             }}
             disabled={!isReviewEditable}
-            className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
+            className="px-6 py-2 bg-blue-600 text-white shadow-sm rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"
           >
-            提交
-          </button>
-          <button
-            type="button"
-            disabled={!isReviewEditable}
-            className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
-          >
-            一键生成公估报告
+            提交理算结果
           </button>
         </div>
 
@@ -900,6 +1218,15 @@ export default function AppraisalClaims({
                     onAppraisalSubmit(selectedCase.id, {
                       reviewDecision: selectedCase.reviewDecision,
                       reviewComment,
+                      // 公估阶段录入的查勘数据，保存回 claimsPool 供保司汇总页读取
+                      surveyBlocks,
+                      surveyRows: surveyBlocks[0]?.rows || [],
+                      surveyPeriod: surveyBlocks[0]?.period || '',
+                      surveyInitiator: surveyBlocks[0]?.initiator || '',
+                      surveyContact: surveyBlocks[0]?.contact || '',
+                      surveyLocation: surveyBlocks[0]?.location || '',
+                      surveySummary: surveyBlocks[0]?.summary || '',
+                      guideRows,
                     }, reviewStage);
                     setShowReviewConfirm(false);
                     setSelectedCase(null);

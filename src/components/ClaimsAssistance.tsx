@@ -242,6 +242,21 @@ export default function ClaimsAssistance({
     setShowSubmitConfirm(false);
     onSubmit({
       ...selectedClaim,
+      // 将所有录入表单的详情数据随提交一起传出，供公估/保司汇总页读取
+      cargoList,
+      accidentInfo,
+      logisticsCompanies,
+      ownerName,
+      truckPlateNo,
+      indirectLossList,
+      showIndirectLoss,
+      remarks,
+      accidentEvidenceFiles,
+      relationEvidenceFiles,
+      vehicleEvidenceFiles,
+      directLossEvidenceFiles,
+      indirectLossEvidenceFiles,
+      remarkEvidenceFiles,
       status: '已提交',
     });
     setTimeout(() => setSelectedClaim(null), 300);
@@ -518,10 +533,6 @@ export default function ClaimsAssistance({
                       className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50"
                     />
                   </div>
-                </div>
-                <div className="mt-4 flex justify-end gap-3">
-                  <button className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50">查看保单</button>
-                  <button className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50">查看报案材料</button>
                 </div>
               </div>
             </section>
@@ -1138,20 +1149,36 @@ export default function ClaimsAssistance({
       </div>
 
       {/* Fixed Bottom Toolbar */}
-        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex justify-between items-center px-6 lg:px-8 gap-4">
-          <button
-            type="button"
-            onClick={() => {
-              const attachmentUrl = new URL(window.location.href);
-              attachmentUrl.searchParams.set('page', 'attachments');
-              attachmentUrl.searchParams.set('assistNo', selectedClaim.assistNo || '');
-              window.open(attachmentUrl.toString(), '_blank');
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
-          >
-            <Upload className="w-4 h-4" />
-            上传凭证
-          </button>
+        <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex flex-wrap justify-between items-center px-6 lg:px-8 gap-4">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const attachmentUrl = new URL(window.location.href);
+                attachmentUrl.searchParams.set('page', 'attachments');
+                attachmentUrl.searchParams.set('assistNo', selectedClaim.assistNo || '');
+                attachmentUrl.searchParams.set('mode', 'upload');
+                window.open(attachmentUrl.toString(), '_blank');
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              上传附件
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const attachmentUrl = new URL(window.location.href);
+                attachmentUrl.searchParams.set('page', 'attachments');
+                attachmentUrl.searchParams.set('assistNo', selectedClaim.assistNo || '');
+                attachmentUrl.searchParams.set('mode', 'view');
+                window.open(attachmentUrl.toString(), '_blank');
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+            >
+              查看附件
+            </button>
+          </div>
           <div className="flex items-center gap-4">
           <button
             onClick={() => setSelectedClaim(null)}
@@ -1179,7 +1206,7 @@ export default function ClaimsAssistance({
             disabled={isLocked || !canSubmit}
             className="px-6 py-2 bg-blue-600 shadow-sm rounded-md text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
           >
-            确认提交
+            提交
           </button>
           </div>
         </div>
