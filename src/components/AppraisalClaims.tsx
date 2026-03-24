@@ -104,6 +104,14 @@ export default function AppraisalClaims({
         };
   const isReviewEditable = selectedCase?.status === stageConfig.inProgressStatus && canReview;
 
+  const openPolicyAttachment = (policyNo: string) => {
+    if (!policyNo) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', 'policy-attachments');
+    url.searchParams.set('policyNo', policyNo);
+    window.open(url.toString(), '_blank');
+  };
+
   const displayData = [...claimsPool]
     .filter((item, index, arr) => arr.findIndex((other) => other.id === item.id) === index)
     .filter((item) => (reviewStage === 'insurer' ? stageConfig.statusOptions.includes(item.status) : true));
@@ -640,83 +648,111 @@ ${attachmentsSection}
 
             <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="text-lg font-semibold text-slate-900">保单信息汇总（只读）</h3>
+                <h3 className="text-lg font-semibold text-slate-900">理赔协助录入详情（只读）</h3>
               </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+              <div className="p-6 space-y-6">
                 <div>
-                  <div className="text-xs text-slate-500 mb-1">保单号</div>
-                  <div className="font-medium text-slate-900">{selectedCase.policyNo || '--'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">被保险人</div>
-                  <div className="font-medium text-slate-900">{selectedCase.insured || '--'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">保险公司</div>
-                  <div className="font-medium text-slate-900">{selectedCase.company || '--'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">险种</div>
-                  <div className="font-medium text-slate-900">{selectedCase.type || '--'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">报案时间</div>
-                  <div className="font-medium text-slate-900">{selectedCase.reportTime || '--'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">当前状态</div>
-                  <div className="font-medium text-slate-900">{selectedCase.status || '--'}</div>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              {/* 理赔录入汇总：直接从 selectedCase.cargoList 读取，由理赔协助提交时写入 */}
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">理赔录入信息汇总（只读）</h3>
-                <div className="text-xs text-slate-500">
-                  报损总额：¥
-                  {(selectedCase.cargoList || []).reduce((sum: number, row: any) => sum + (Number(row.amount) || 0), 0).toLocaleString('zh-CN')}
-                </div>
-              </div>
-              <div className="p-6">
-                {(selectedCase.cargoList || []).length === 0 ? (
-                  <div className="text-sm text-slate-400 text-center py-6">暂无理赔录入货损明细</div>
-                ) : (
-                  <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                    <table className="w-full min-w-[1120px] table-fixed text-left border-collapse whitespace-nowrap text-sm">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-                          <th className="px-4 py-2 w-14">序号</th>
-                          <th className="px-4 py-2 w-[22%]">品名</th>
-                          <th className="px-4 py-2 w-[16%]">型号</th>
-                          <th className="px-4 py-2 w-20">数量</th>
-                          <th className="px-4 py-2 w-20">包装</th>
-                          <th className="px-4 py-2 w-24">单价</th>
-                          <th className="px-4 py-2 w-28">报损金额</th>
-                          <th className="px-4 py-2 w-28">报损类型</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {(selectedCase.cargoList || []).map((row: any, index: number) => (
-                          <tr key={row.id || index}>
-                            <td className="px-4 py-2 text-slate-500">{index + 1}</td>
-                            <td className="px-4 py-2 text-slate-800">{row.name || '--'}</td>
-                            <td className="px-4 py-2 text-slate-700">{row.model || '--'}</td>
-                            <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
-                            <td className="px-4 py-2 text-slate-700">{row.unit || '--'}</td>
-                            <td className="px-4 py-2 text-slate-700">{row.price || '--'}</td>
-                            <td className="px-4 py-2 text-rose-600">{row.amount || '--'}</td>
-                            <td className="px-4 py-2 text-slate-700">{row.type || '--'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="text-xs font-semibold text-slate-600 mb-3">基础信息</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                    <div><div className="text-xs text-slate-500 mb-1">案件号</div><div className="font-medium text-slate-900">{selectedCase.id || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">关联协助号</div><div className="font-medium text-slate-900">{selectedCase.assistNo || '--'}</div></div>
+                    <div>
+                      <div className="text-xs text-slate-500 mb-1">保单号</div>
+                      <div className="font-medium text-slate-900">{selectedCase.policyNo || '--'}</div>
+                      <button
+                        type="button"
+                        onClick={() => openPolicyAttachment(selectedCase.policyNo || '')}
+                        className="mt-1 text-xs text-sky-500 hover:text-sky-600 underline underline-offset-2"
+                      >
+                        保单文本链接
+                      </button>
+                    </div>
+                    <div><div className="text-xs text-slate-500 mb-1">客户编码</div><div className="font-medium text-slate-900">{selectedCase.customerCode || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">被保险人</div><div className="font-medium text-slate-900">{selectedCase.insured || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">保险公司</div><div className="font-medium text-slate-900">{selectedCase.company || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">险种</div><div className="font-medium text-slate-900">{selectedCase.type || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">报案时间</div><div className="font-medium text-slate-900">{selectedCase.reportTime || '--'}</div></div>
                   </div>
-                )}
-                {selectedCase.indirectLossList?.length > 0 && (
-                  <div className="mt-4">
-                    <div className="text-xs font-semibold text-slate-600 mb-2">间接损失</div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3">事故信息</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                    <div><div className="text-xs text-slate-500 mb-1">出险时间</div><div className="font-medium text-slate-900">{selectedCase.accidentInfo?.time || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">报案时间</div><div className="font-medium text-slate-900">{selectedCase.accidentInfo?.reportTime || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">报案号</div><div className="font-medium text-slate-900">{selectedCase.accidentInfo?.reportNo || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">事故原因</div><div className="font-medium text-slate-900">{[selectedCase.accidentInfo?.reason1, selectedCase.accidentInfo?.reason2].filter(Boolean).join(' / ') || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">启运地</div><div className="font-medium text-slate-900">{[selectedCase.accidentInfo?.departureProvince, selectedCase.accidentInfo?.departureCity].filter(Boolean).join(' ') || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">目的地</div><div className="font-medium text-slate-900">{[selectedCase.accidentInfo?.destinationProvince, selectedCase.accidentInfo?.destinationCity].filter(Boolean).join(' ') || '--'}</div></div>
+                    <div className="md:col-span-2 xl:col-span-2"><div className="text-xs text-slate-500 mb-1">出险地点</div><div className="font-medium text-slate-900">{[selectedCase.accidentInfo?.province, selectedCase.accidentInfo?.city, selectedCase.accidentInfo?.district, selectedCase.accidentInfo?.address].filter(Boolean).join(' ') || '--'}</div></div>
+                    <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">事故描述</div><div className="font-medium text-slate-900 whitespace-pre-wrap">{selectedCase.accidentInfo?.description || '--'}</div></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3">承托关系</div>
+                  {(selectedCase.logisticsCompanies || []).length === 0 ? (
+                    <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无承托关系信息</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {(selectedCase.logisticsCompanies || []).map((row: any, index: number) => (
+                        <div key={row.id || index} className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-700">{row.name || '--'}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3">车辆信息</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                    <div><div className="text-xs text-slate-500 mb-1">货主</div><div className="font-medium text-slate-900">{selectedCase.ownerName || '--'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">车牌号</div><div className="font-medium text-slate-900">{selectedCase.truckPlateNo || '--'}</div></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3">直接损失（货损明细）</div>
+                  {(selectedCase.cargoList || []).length === 0 ? (
+                    <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无货损明细</div>
+                  ) : (
+                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                      <table className="w-full min-w-[1120px] table-fixed text-left border-collapse whitespace-nowrap text-sm">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                            <th className="px-4 py-2 w-14">序号</th>
+                            <th className="px-4 py-2 w-[22%]">品名</th>
+                            <th className="px-4 py-2 w-[16%]">型号</th>
+                            <th className="px-4 py-2 w-20">数量</th>
+                            <th className="px-4 py-2 w-20">包装</th>
+                            <th className="px-4 py-2 w-24">单价</th>
+                            <th className="px-4 py-2 w-28">报损金额</th>
+                            <th className="px-4 py-2 w-28">报损类型</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(selectedCase.cargoList || []).map((row: any, index: number) => (
+                            <tr key={row.id || index}>
+                              <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                              <td className="px-4 py-2 text-slate-800">{row.name || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.model || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.quantity || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.unit || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.price || '--'}</td>
+                              <td className="px-4 py-2 text-rose-600">{row.amount || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.type || '--'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3">间接损失</div>
+                  {(selectedCase.indirectLossList || []).length === 0 ? (
+                    <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">无间接损失</div>
+                  ) : (
                     <div className="overflow-x-auto border border-slate-200 rounded-lg">
                       <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
                         <thead>
@@ -739,49 +775,84 @@ ${attachmentsSection}
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                )}
-                {selectedCase.accidentInfo && (
-                  <div className="mt-4 grid grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
-                    <div><span className="text-xs text-slate-500">事故原因：</span><span className="text-slate-800">{[selectedCase.accidentInfo.reason1, selectedCase.accidentInfo.reason2].filter(Boolean).join(' / ') || '--'}</span></div>
-                    <div><span className="text-xs text-slate-500">出险时间：</span><span className="text-slate-800">{selectedCase.accidentInfo.time || '--'}</span></div>
-                    <div><span className="text-xs text-slate-500">报案号：</span><span className="text-slate-800">{selectedCase.accidentInfo.reportNo || '--'}</span></div>
-                    <div><span className="text-xs text-slate-500">出险地点：</span><span className="text-slate-800">{[selectedCase.accidentInfo.province, selectedCase.accidentInfo.city, selectedCase.accidentInfo.address].filter(Boolean).join(' ') || '--'}</span></div>
-                  </div>
-                )}
-              </div>
-            </section>
+                  )}
+                </div>
 
-            <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="text-lg font-semibold text-slate-900">理赔协助上传附件（只读）</h3>
-              </div>
-              <div className="p-6">
-                {getAssistAttachmentGroups(selectedCase).length === 0 ? (
-                  <div className="text-sm text-slate-400 text-center py-4">暂无附件记录</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {getAssistAttachmentGroups(selectedCase).map((group) => (
-                      <div key={group.label} className="rounded-lg border border-slate-200 p-3 bg-slate-50/60">
-                        <div className="text-xs font-semibold text-slate-700 mb-2">{group.label}（{group.files.length}）</div>
-                        <div className="space-y-1">
-                          {group.files.map((file: string, idx: number) => (
-                            <div key={`${group.label}-${idx}`} className="text-xs text-slate-600 truncate">{file}</div>
-                          ))}
-                        </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3">理赔协助附件与证据（只读）</div>
+                  <div className="space-y-3">
+                    {getAssistAttachmentGroups(selectedCase).length === 0 ? (
+                      <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无附件记录</div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {getAssistAttachmentGroups(selectedCase).map((group) => (
+                          <div key={group.label} className="rounded-lg border border-slate-200 p-3 bg-slate-50/60">
+                            <div className="text-xs font-semibold text-slate-700 mb-2">{group.label}（{group.files.length}）</div>
+                            <div className="space-y-1">
+                              {group.files.map((file: string, idx: number) => (
+                                <div key={`${group.label}-${idx}`} className="text-xs text-slate-600 truncate">{file}</div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {[
+                        { label: '事故证明', files: selectedCase.accidentEvidenceFiles || [] },
+                        { label: '承托关系证明', files: selectedCase.relationEvidenceFiles || [] },
+                        { label: '车辆证据', files: selectedCase.vehicleEvidenceFiles || [] },
+                        { label: '直接损失证据', files: selectedCase.directLossEvidenceFiles || [] },
+                        { label: '间接损失证据', files: selectedCase.indirectLossEvidenceFiles || [] },
+                        { label: '备注附件', files: selectedCase.remarkEvidenceFiles || [] },
+                      ].map((group) => (
+                        <div key={group.label} className="rounded-lg border border-slate-200 p-3 bg-slate-50/60">
+                          <div className="text-xs font-semibold text-slate-700 mb-2">{group.label}（{group.files.length}）</div>
+                          {group.files.length === 0 ? (
+                            <div className="text-xs text-slate-400">暂无</div>
+                          ) : (
+                            <div className="space-y-1">
+                              {group.files.map((file: string, idx: number) => (
+                                <div key={`${group.label}-${idx}`} className="text-xs text-slate-600 truncate">{file}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                )}
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-2">理赔协助备注</div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap">{selectedCase.remarks || '--'}</div>
+                </div>
               </div>
             </section>
 
             <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              {/* 公估录入汇总：优先读取 surveyBlocks，兼容旧格式 */}
+              {/* 公估理赔录入详情（只读）：优先读取 surveyBlocks，兼容旧格式 */}
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="text-lg font-semibold text-slate-900">查勘历史（只读）</h3>
+                <h3 className="text-lg font-semibold text-slate-900">公估理赔录入详情（只读）</h3>
               </div>
               <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">公估录入状态</div>
+                    <div className="font-medium text-slate-900">{selectedCase.status || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">公估结论</div>
+                    <div className="font-medium text-slate-900">{selectedCase.reviewDecision || '--'}</div>
+                  </div>
+                  <div className="md:col-span-2 xl:col-span-2">
+                    <div className="text-xs text-slate-500 mb-1">公估备注</div>
+                    <div className="font-medium text-slate-900 whitespace-pre-wrap">{selectedCase.reviewComment || '--'}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-2">查勘历史（只读）</div>
                 {(() => {
                   // 兼容：优先 surveyBlocks；兼容旧字段
                   const displayBlocks: Array<{
@@ -869,6 +940,44 @@ ${attachmentsSection}
                     </div>
                   ));
                 })()}
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-2">保险公司认定意见（公估录入，仅读）</div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap">
+                    {selectedCase.insurerOpinion || insurerOpinion || '--'}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 mb-2">引导与跟进记录（只读）</div>
+                  {(selectedCase.guideRows || guideRows || []).length === 0 ? (
+                    <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无引导记录</div>
+                  ) : (
+                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                      <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                            <th className="px-4 py-2 w-14">序号</th>
+                            <th className="px-4 py-2 w-40">日期</th>
+                            <th className="px-4 py-2">反馈信息</th>
+                            <th className="px-4 py-2">备注</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(selectedCase.guideRows || guideRows || []).map((row: any, idx: number) => (
+                            <tr key={row.id || idx}>
+                              <td className="px-4 py-2 text-slate-500">{idx + 1}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.date || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.feedback || '--'}</td>
+                              <td className="px-4 py-2 text-slate-700">{row.note || '--'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
 
@@ -1137,22 +1246,123 @@ ${attachmentsSection}
         <div className="space-y-6">
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900">保单与理赔协助汇总（只读）</h3>
+              <h3 className="text-lg font-semibold text-slate-900">理赔协助录入详情（只读）</h3>
             </div>
-            <div className="p-6 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
-                <div><div className="text-xs text-slate-500 mb-1">保单号</div><div className="font-medium text-slate-900">{selectedCase.policyNo || '--'}</div></div>
-                <div><div className="text-xs text-slate-500 mb-1">被保险人</div><div className="font-medium text-slate-900">{selectedCase.insured || '--'}</div></div>
-                <div><div className="text-xs text-slate-500 mb-1">保险公司</div><div className="font-medium text-slate-900">{selectedCase.company || '--'}</div></div>
-                <div><div className="text-xs text-slate-500 mb-1">险种</div><div className="font-medium text-slate-900">{selectedCase.type || '--'}</div></div>
-                <div><div className="text-xs text-slate-500 mb-1">车牌号</div><div className="font-medium text-slate-900">{selectedCase.truckPlateNo || '--'}</div></div>
-                <div><div className="text-xs text-slate-500 mb-1">货主</div><div className="font-medium text-slate-900">{selectedCase.ownerName || '--'}</div></div>
-                <div><div className="text-xs text-slate-500 mb-1">报案时间</div><div className="font-medium text-slate-900">{selectedCase.reportTime || '--'}</div></div>
-                <div><div className="text-xs text-slate-500 mb-1">案件号</div><div className="font-medium text-slate-900">{selectedCase.id || '--'}</div></div>
+            <div className="p-6 space-y-6">
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">基础信息</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">案件号</div>
+                    <div className="font-medium text-slate-900">{selectedCase.id || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">关联协助号</div>
+                    <div className="font-medium text-slate-900">{selectedCase.assistNo || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">保单号</div>
+                    <div className="font-medium text-slate-900">{selectedCase.policyNo || '--'}</div>
+                    <button
+                      type="button"
+                      onClick={() => openPolicyAttachment(selectedCase.policyNo || '')}
+                      className="mt-1 text-xs text-sky-500 hover:text-sky-600 underline underline-offset-2"
+                    >
+                      保单文本链接
+                    </button>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">客户编码</div>
+                    <div className="font-medium text-slate-900">{selectedCase.customerCode || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">被保险人</div>
+                    <div className="font-medium text-slate-900">{selectedCase.insured || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">保险公司</div>
+                    <div className="font-medium text-slate-900">{selectedCase.company || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">险种</div>
+                    <div className="font-medium text-slate-900">{selectedCase.type || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">报案时间</div>
+                    <div className="font-medium text-slate-900">{selectedCase.reportTime || '--'}</div>
+                  </div>
+                </div>
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-slate-600 mb-2">理赔协助录入货损明细</div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">事故信息</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">出险时间</div>
+                    <div className="font-medium text-slate-900">{selectedCase.accidentInfo?.time || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">报案时间</div>
+                    <div className="font-medium text-slate-900">{selectedCase.accidentInfo?.reportTime || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">报案号</div>
+                    <div className="font-medium text-slate-900">{selectedCase.accidentInfo?.reportNo || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">事故原因</div>
+                    <div className="font-medium text-slate-900">{[selectedCase.accidentInfo?.reason1, selectedCase.accidentInfo?.reason2].filter(Boolean).join(' / ') || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">启运地</div>
+                    <div className="font-medium text-slate-900">{[selectedCase.accidentInfo?.departureProvince, selectedCase.accidentInfo?.departureCity].filter(Boolean).join(' ') || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">目的地</div>
+                    <div className="font-medium text-slate-900">{[selectedCase.accidentInfo?.destinationProvince, selectedCase.accidentInfo?.destinationCity].filter(Boolean).join(' ') || '--'}</div>
+                  </div>
+                  <div className="md:col-span-2 xl:col-span-2">
+                    <div className="text-xs text-slate-500 mb-1">出险地点</div>
+                    <div className="font-medium text-slate-900">{[selectedCase.accidentInfo?.province, selectedCase.accidentInfo?.city, selectedCase.accidentInfo?.district, selectedCase.accidentInfo?.address].filter(Boolean).join(' ') || '--'}</div>
+                  </div>
+                  <div className="md:col-span-2 xl:col-span-4">
+                    <div className="text-xs text-slate-500 mb-1">事故描述</div>
+                    <div className="font-medium text-slate-900 whitespace-pre-wrap">{selectedCase.accidentInfo?.description || '--'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">承托关系</div>
+                {(selectedCase.logisticsCompanies || []).length === 0 ? (
+                  <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无承托关系信息</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {(selectedCase.logisticsCompanies || []).map((row: any, index: number) => (
+                      <div key={row.id || index} className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-700">
+                        {row.name || '--'}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">车辆信息</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">货主</div>
+                    <div className="font-medium text-slate-900">{selectedCase.ownerName || '--'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">车牌号</div>
+                    <div className="font-medium text-slate-900">{selectedCase.truckPlateNo || '--'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">直接损失（货损明细）</div>
                 {(selectedCase.cargoList || []).length === 0 ? (
                   <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无货损明细</div>
                 ) : (
@@ -1190,7 +1400,37 @@ ${attachmentsSection}
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-slate-600 mb-2">理赔协助上传附件（按案件号关联）</div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">间接损失</div>
+                {(selectedCase.indirectLossList || []).length === 0 ? (
+                  <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">无间接损失</div>
+                ) : (
+                  <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                          <th className="px-4 py-2 w-14">序号</th>
+                          <th className="px-4 py-2 w-40">损失金额</th>
+                          <th className="px-4 py-2 w-40">损失项目</th>
+                          <th className="px-4 py-2">损失说明</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(selectedCase.indirectLossList || []).map((row: any, index: number) => (
+                          <tr key={row.id || index}>
+                            <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.amount || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.item || '--'}</td>
+                            <td className="px-4 py-2 text-slate-700">{row.note || '--'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">理赔协助上传附件（只读）</div>
                 {getAssistAttachmentGroups(selectedCase).length === 0 ? (
                   <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无附件记录</div>
                 ) : (
@@ -1207,6 +1447,40 @@ ${attachmentsSection}
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">理赔协助证据清单（只读）</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { label: '事故证明', files: selectedCase.accidentEvidenceFiles || [] },
+                    { label: '承托关系证明', files: selectedCase.relationEvidenceFiles || [] },
+                    { label: '车辆证据', files: selectedCase.vehicleEvidenceFiles || [] },
+                    { label: '直接损失证据', files: selectedCase.directLossEvidenceFiles || [] },
+                    { label: '间接损失证据', files: selectedCase.indirectLossEvidenceFiles || [] },
+                    { label: '备注附件', files: selectedCase.remarkEvidenceFiles || [] },
+                  ].map((group) => (
+                    <div key={group.label} className="rounded-lg border border-slate-200 p-3 bg-slate-50/60">
+                      <div className="text-xs font-semibold text-slate-700 mb-2">{group.label}（{group.files.length}）</div>
+                      {group.files.length === 0 ? (
+                        <div className="text-xs text-slate-400">暂无</div>
+                      ) : (
+                        <div className="space-y-1">
+                          {group.files.map((file: string, idx: number) => (
+                            <div key={`${group.label}-${idx}`} className="text-xs text-slate-600 truncate">{file}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-2">理赔协助备注</div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap">
+                  {selectedCase.remarks || '--'}
+                </div>
               </div>
             </div>
           </section>

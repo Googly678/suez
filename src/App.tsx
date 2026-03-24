@@ -21,6 +21,7 @@ import ClaimsAssistance from './components/ClaimsAssistance';
 import AppraisalClaims from './components/AppraisalClaims';
 import AttachmentManager from './components/AttachmentManager';
 import InquiryAttachmentManager from './components/InquiryAttachmentManager';
+import PolicyAttachmentManager from './components/PolicyAttachmentManager';
 import InquiryForm from './components/InquiryForm';
 import LoginScreen from './components/auth/LoginScreen';
 import OrganizationManagement from './components/system/OrganizationManagement';
@@ -520,10 +521,12 @@ export default function App() {
   const isMobileInquiryPage = query.get('page') === 'inquiry';
   const isAttachmentPage = query.get('page') === 'attachments';
   const isInquiryAttachmentPage = query.get('page') === 'inquiry-attachments';
+  const isPolicyAttachmentPage = query.get('page') === 'policy-attachments';
   const queryCustomerName = query.get('customerName') || '张三';
 
   const inquiryNo = query.get('inquiryNo') || '';
   const attachmentAssistNo = query.get('assistNo') || '';
+  const policyNo = query.get('policyNo') || '';
 
   if (isAttachmentPage) {
     return <AttachmentManager assistNo={attachmentAssistNo} onClose={() => window.close()} />;
@@ -531,6 +534,10 @@ export default function App() {
 
   if (isInquiryAttachmentPage) {
     return <InquiryAttachmentManager inquiryNo={inquiryNo} onClose={() => window.close()} />;
+  }
+
+  if (isPolicyAttachmentPage) {
+    return <PolicyAttachmentManager policyNo={policyNo} onClose={() => window.close()} />;
   }
   
   if (isMobileInquiryPage) {
@@ -1213,6 +1220,8 @@ export default function App() {
       updatedAt: new Date().toLocaleString(),
     };
 
+    const submittedAssistDetailFields = getAssistDetailFields(submittedAssist);
+
     setClaimsPool((prev) => {
       const existedCase = prev.find((item) => item.assistNo === submittedAssist.assistNo);
       if (existedCase) {
@@ -1225,6 +1234,14 @@ export default function App() {
                 reviewComment: '',
                 reviewTime: '',
                 reportTime: submittedAssist.reportTime,
+                customerCode: submittedAssist.customerCode,
+                policyNo: submittedAssist.policyNo,
+                company: submittedAssist.company,
+                type: submittedAssist.type,
+                insured: submittedAssist.insured,
+                startTime: submittedAssist.startTime,
+                endTime: submittedAssist.endTime,
+                ...submittedAssistDetailFields,
               }
             : item,
         );
@@ -1245,15 +1262,8 @@ export default function App() {
           reporter: '理赔协助',
           reportTime: submittedAssist.reportTime,
           status: '已提交',
-          // 理赔录入详情字段，供公估/保司汇总页读取
-          cargoList: submittedAssist.cargoList || [],
-          accidentInfo: submittedAssist.accidentInfo || {},
-          logisticsCompanies: submittedAssist.logisticsCompanies || [],
-          ownerName: submittedAssist.ownerName || '',
-          truckPlateNo: submittedAssist.truckPlateNo || '',
-          indirectLossList: submittedAssist.indirectLossList || [],
-          showIndirectLoss: submittedAssist.showIndirectLoss || false,
-          remarks: submittedAssist.remarks || '',
+          // 理赔协助完整信息块同步到案件池，供公估/保司详情页按原信息块只读展示
+          ...submittedAssistDetailFields,
         },
       ];
     });

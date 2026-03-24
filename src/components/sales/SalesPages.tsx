@@ -747,6 +747,14 @@ export function OrderManagementView({
   const startDisplay = filteredOrderCount === 0 ? 0 : 1;
   const endDisplay = filteredOrderCount;
 
+  const openPolicyAttachment = (policyNo: string) => {
+    if (!policyNo) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', 'policy-attachments');
+    url.searchParams.set('policyNo', policyNo);
+    window.open(url.toString(), '_blank');
+  };
+
   return (
     <>
       {!selectedOrderForDetail && (
@@ -818,6 +826,13 @@ export function OrderManagementView({
                 <div className="text-right">
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">保单号</div>
                   <div className="text-sm font-mono font-bold text-blue-600">{selectedOrderForDetail.policyNo || '--'}</div>
+                  <button
+                    type="button"
+                    onClick={() => openPolicyAttachment(selectedOrderForDetail.policyNo || '')}
+                    className="mt-1 text-xs text-sky-500 hover:text-sky-600 underline underline-offset-2"
+                  >
+                    保单文本链接
+                  </button>
                 </div>
               </div>
             </div>

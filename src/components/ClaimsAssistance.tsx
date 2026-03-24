@@ -299,6 +299,14 @@ export default function ClaimsAssistance({
 
   const formatMoney = (value: number) => `¥${value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const openPolicyAttachment = (policyNo: string) => {
+    if (!policyNo) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', 'policy-attachments');
+    url.searchParams.set('policyNo', policyNo);
+    window.open(url.toString(), '_blank');
+  };
+
   const calcReviewAging = (startText: string, endText: string) => {
     const start = new Date(startText);
     const end = new Date(endText || Date.now());
@@ -483,8 +491,15 @@ export default function ClaimsAssistance({
             </section>
 
             <section id="step-1" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-32">
-              <div className="w-full px-6 py-4 bg-white border-b border-slate-200">
+              <div className="w-full px-6 py-4 bg-white border-b border-slate-200 flex items-center justify-between">
                 <h3 className="text-base font-semibold text-slate-900">保单信息</h3>
+                <button
+                  type="button"
+                  onClick={() => openPolicyAttachment(selectedClaim.policyNo || '')}
+                  className="text-xs text-sky-500 hover:text-sky-600 underline underline-offset-2"
+                >
+                  保单文本链接
+                </button>
               </div>
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
