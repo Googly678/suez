@@ -1396,6 +1396,20 @@ export default function ClaimsAssistance({
       </div>
 
       <div className="flex flex-col">
+        {claimAssistPool?.some((item) => item.status === '') && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h4 className="font-semibold text-blue-900 mb-1">有被驳回的案件待重新提交</h4>
+                <p className="text-sm text-blue-800">
+                  低于 "草稿" 状态的案件已被驳回，请重新填写相关信息并提交。
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="pb-4 flex justify-between items-center">
           <div className="text-sm text-slate-500">共找到 <span className="font-medium text-slate-900">{filteredRows.length}</span> 条理赔记录</div>
         </div>

@@ -1130,6 +1130,14 @@ export default function App() {
     window.open(inquiryAttachmentUrl.toString(), '_blank');
   };
 
+  const handleOpenClaimAttachmentViewer = (assistNo: string) => {
+    if (!assistNo) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', 'attachments');
+    url.searchParams.set('assistNo', assistNo);
+    window.open(url.toString(), '_blank');
+  };
+
   const generateClaimAssistNo = () => {
     const date = new Date();
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
@@ -2176,6 +2184,10 @@ export default function App() {
                   onInitialSelectedCaseConsumed={() => setSelectedAppraisalCase(null)}
                   reviewStage="appraisal"
                   canReview={hasPermission('claims.appraisal.review')}
+                  onNavigateToClaimsAssistance={(assistNo) => {
+                    setActiveItem('理赔协助');
+                  }}
+                  onOpenAttachmentViewer={handleOpenClaimAttachmentViewer}
                 />
               </div>
             ) : activeItem === '保司审核' ? (
@@ -2188,6 +2200,10 @@ export default function App() {
                   onInitialSelectedCaseConsumed={() => setSelectedAppraisalCase(null)}
                   reviewStage="insurer"
                   canReview={hasPermission('claims.insurer.review')}
+                  onNavigateToClaimsAssistance={(assistNo) => {
+                    setActiveItem('理赔协助');
+                  }}
+                  onOpenAttachmentViewer={handleOpenClaimAttachmentViewer}
                 />
               </div>
             ) : (

@@ -9,6 +9,8 @@ export default function AppraisalClaims({
   onInitialSelectedCaseConsumed,
   reviewStage = 'appraisal',
   canReview,
+  onNavigateToClaimsAssistance,
+  onOpenAttachmentViewer,
 }: {
   claimsPool: any[];
   onCaseOpen: (claimCase: any, reviewStage?: 'appraisal' | 'insurer') => void;
@@ -17,6 +19,8 @@ export default function AppraisalClaims({
   onInitialSelectedCaseConsumed?: () => void;
   reviewStage?: 'appraisal' | 'insurer';
   canReview: boolean;
+  onNavigateToClaimsAssistance?: (assistNo: string) => void;
+  onOpenAttachmentViewer?: (assistNo: string) => void;
 }) {
   const [selectedCase, setSelectedCase] = useState<any>(null);
   const [reviewComment, setReviewComment] = useState('');
@@ -611,6 +615,29 @@ ${attachmentsSection}
           <div className="space-y-6">
             <div className="text-sm text-rose-600">页面可以汇总查看案件得失和理赔录入信息，以及查勘新信息。</div>
 
+            {selectedCase?.status === '审核退回' && (
+              <section className="bg-amber-50 border border-amber-200 rounded-xl overflow-hidden">
+                <div className="px-6 py-4 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-amber-900 mb-1">案件已被驳回，需要重新提交</h4>
+                    <p className="text-sm text-amber-800 mb-3">
+                      保险公司要求补充以下信息。请返回【理赔协助】重新填写并提交。
+                    </p>
+                    <div className="text-sm text-amber-800 mb-3 pl-4 border-l-2 border-amber-300">
+                      {selectedCase?.reviewComment || '暂无具体说明'}
+                    </div>
+                    <button
+                      onClick={() => onNavigateToClaimsAssistance?.(selectedCase?.assistNo)}
+                      className="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                    >
+                      返回理赔协助重新提交
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
             <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                 <h3 className="text-lg font-semibold text-slate-900">保单信息汇总（只读）</h3>
@@ -990,7 +1017,7 @@ ${attachmentsSection}
             />
             <button
               type="button"
-              onClick={() => setInsurerActionMessage(`当前已上传附件 ${detailAttachmentCount} 份。`)}
+              onClick={() => onOpenAttachmentViewer?.(selectedCase?.assistNo || '')}
               className="px-4 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50"
             >
               查看附件
@@ -1449,14 +1476,23 @@ ${attachmentsSection}
 
         {/* Bottom Toolbar */}
         <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex flex-wrap justify-between items-center px-6 lg:px-8 gap-4">
-          <button
-            type="button"
-            onClick={handleGenerateAppraisalReport}
-            disabled={!isReviewEditable}
-            className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
-          >
-            一键生成公估报告
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleGenerateAppraisalReport}
+              disabled={!isReviewEditable}
+              className="px-6 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
+            >
+              一键生成公估报告
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAttachmentViewer?.(selectedCase?.assistNo || '')}
+              className="px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+            >
+              查看附件
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => {
