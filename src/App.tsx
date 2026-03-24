@@ -74,6 +74,7 @@ const sidebarGroups = [
 const demoAccounts = [
   { username: 'admin', password: '123456', roleName: '系统管理员', realName: '系统管理员' },
   { username: 'sales.sz', password: '123456', roleName: '销售经理', realName: '深圳销售经理' },
+  { username: 'claims', password: '123456', roleName: '理赔协助员', realName: '理赔协助员' },
   { username: 'appraisal', password: '123456', roleName: '公估审核员', realName: '公估审核员' },
   { username: 'insurer', password: '123456', roleName: '保司审核员', realName: '保司审核员' },
 ];
@@ -87,6 +88,7 @@ const demoRolePermissions: Record<string, string[]> = {
     'sales.opportunity.view',
     'claims.assist.view',
     'claims.assist.manage',
+    'claims.assist.submit',
     'claims.appraisal.view',
     'claims.appraisal.review',
     'claims.insurer.view',
@@ -99,6 +101,7 @@ const demoRolePermissions: Record<string, string[]> = {
     'system.user.manage',
   ],
   销售经理: ['sales.inquiry.view', 'sales.inquiry.manage', 'sales.customer.view', 'sales.opportunity.view'],
+  理赔协助员: ['claims.assist.view', 'claims.assist.manage', 'claims.assist.submit'],
   公估审核员: ['claims.appraisal.view', 'claims.appraisal.review', 'claims.assist.view'],
   保司审核员: ['claims.insurer.view', 'claims.insurer.review', 'claims.assist.view'],
 };
