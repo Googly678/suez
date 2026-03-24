@@ -1644,7 +1644,10 @@ ${attachmentsSection}
                   key={idx}
                   className="hover:bg-slate-50 transition-colors group cursor-pointer"
                   onClick={() => {
-                    if (row.status === stageConfig.openableStatus) {
+                    // 公估理赔阶段：已提交或被保司退回的案件均可重新开始公估
+                    const canOpen = row.status === stageConfig.openableStatus ||
+                      (reviewStage === 'appraisal' && row.status === '审核退回');
+                    if (canOpen) {
                       if (!canReview) {
                         setSelectedCase(row);
                       } else {
@@ -1670,9 +1673,25 @@ ${attachmentsSection}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button className="text-blue-600 hover:text-blue-800 font-medium text-xs transition-colors p-1 rounded hover:bg-blue-50 disabled:text-slate-400 disabled:hover:bg-transparent" disabled={row.status === stageConfig.openableStatus && !canReview}>
-                      {row.status === stageConfig.openableStatus ? stageConfig.openActionText : row.status === stageConfig.inProgressStatus ? stageConfig.continueActionText : '查看详情'}
-                    </button>
+                    {(() => {
+                      const canOpen = row.status === stageConfig.openableStatus ||
+                        (reviewStage === 'appraisal' && row.status === '审核退回');
+                      const label = row.status === stageConfig.openableStatus
+                        ? stageConfig.openActionText
+                        : row.status === stageConfig.inProgressStatus
+                        ? stageConfig.continueActionText
+                        : (reviewStage === 'appraisal' && row.status === '审核退回')
+                        ? '重新公估'
+                        : '查看详情';
+                      return (
+                        <button
+                          className={`font-medium text-xs transition-colors p-1 rounded ${canOpen ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'} disabled:text-slate-400`}
+                          disabled={canOpen && !canReview}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}
