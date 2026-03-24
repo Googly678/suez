@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronDown, Search, MoreHorizontal, Plus, Upload, AlertCircle, Check, ClipboardList, Building2, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Search, MoreHorizontal, Plus, AlertCircle, Check, ClipboardList, Building2, Trash2, ExternalLink } from 'lucide-react';
 
 import { locationData } from '../constants/locations';
 
@@ -161,10 +161,6 @@ export default function ClaimsAssistance({
     { id: 1, amount: '', item: '', note: '' },
   ]);
 
-  const accidentEvidenceInputRef = useRef<HTMLInputElement>(null);
-  const relationEvidenceInputRef = useRef<HTMLInputElement>(null);
-  const vehicleEvidenceInputRef = useRef<HTMLInputElement>(null);
-  const directLossEvidenceInputRef = useRef<HTMLInputElement>(null);
   const indirectLossEvidenceInputRef = useRef<HTMLInputElement>(null);
   const remarkEvidenceInputRef = useRef<HTMLInputElement>(null);
 
@@ -227,7 +223,22 @@ export default function ClaimsAssistance({
   };
 
   const updateCargo = (id: number, field: string, value: string) => {
-    setCargoList(cargoList.map(item => item.id === id ? { ...item, [field]: value } : item));
+    setCargoList(cargoList.map(item => {
+      if (item.id === id) {
+        const newItem = { ...item, [field]: value };
+        if (field === 'quantity' || field === 'price') {
+          const qty = Number(newItem.quantity) || 0;
+          const price = Number(newItem.price) || 0;
+          if (qty > 0 && price >= 0) {
+            newItem.amount = (qty * price).toFixed(2).replace(/\.00$/, '');
+          } else {
+            newItem.amount = '';
+          }
+        }
+        return newItem;
+      }
+      return item;
+    }));
   };
 
   const addLogisticsCompany = () => {
@@ -257,6 +268,13 @@ export default function ClaimsAssistance({
   const isLocked = ['已提交', '审核中', '已通过'].includes(selectedClaim?.status || '') || !canManage;
 
   const handleSubmitConfirm = () => {
+    const accidentTime = accidentInfo.time ? new Date(accidentInfo.time).getTime() : null;
+    const reportTime = accidentInfo.reportTime ? new Date(accidentInfo.reportTime).getTime() : null;
+    if (accidentTime !== null && reportTime !== null && reportTime < accidentTime) {
+      alert('报案时间不能早于出险时间。');
+      return;
+    }
+
     setShowSubmitConfirm(false);
     onSubmit({
       ...selectedClaim,
@@ -304,6 +322,58 @@ export default function ClaimsAssistance({
     const url = new URL(window.location.href);
     url.searchParams.set('page', 'policy-attachments');
     url.searchParams.set('policyNo', policyNo);
+    window.open(url.toString(), '_blank');
+  };
+
+  const openClaimAttachmentFolder = (folder: string) => {
+    const assistNo = selectedClaim?.assistNo || '';
+    if (!assistNo) return;
+    const attachmentUrl = new URL(window.location.href);
+    attachmentUrl.searchParams.set('page', 'attachments');
+    attachmentUrl.searchParams.set('assistNo', assistNo);
+    attachmentUrl.searchParams.set('folder', folder);
+    window.open(attachmentUrl.toString(), '_blank');
+  };
+
+  const endorsementTimeline = useMemo(() => {
+    if (Array.isArray(selectedClaim?.endorsementRecords) && selectedClaim.endorsementRecords.length > 0) {
+      return selectedClaim.endorsementRecords.map((item: any, index: number) => ({
+        id: String(item.id || `endorsement-${index + 1}`),
+        time: String(item.time || item.date || selectedClaim?.updatedAt || '--'),
+        content: String(item.content || item.record || item.note || '--'),
+      }));
+    }
+
+    const text = String(selectedClaim?.endorsement || '').trim();
+    if (!text) {
+      return [];
+    }
+
+    return text
+      .split(/\r?\n+/)
+      .map((line: string, index: number) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const matched = trimmed.match(/^(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)\s*[-:：]\s*(.+)$/);
+        if (matched) {
+          return { id: `endorsement-${index + 1}`, time: matched[1], content: matched[2] };
+        }
+        return { id: `endorsement-${index + 1}`, time: selectedClaim?.updatedAt || '--', content: trimmed };
+      })
+      .filter(Boolean) as Array<{ id: string; time: string; content: string }>;
+  }, [selectedClaim]);
+
+  useEffect(() => {
+    if (!selectedClaim?.policyNo) return;
+    localStorage.setItem(`policy_endorsements_${selectedClaim.policyNo}`, JSON.stringify(endorsementTimeline));
+  }, [selectedClaim?.policyNo, endorsementTimeline]);
+
+  const openEndorsementRecord = (policyNo: string, index: number) => {
+    if (!policyNo) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', 'policy-endorsements');
+    url.searchParams.set('policyNo', policyNo);
+    url.searchParams.set('index', String(index));
     window.open(url.toString(), '_blank');
   };
 
@@ -491,21 +561,25 @@ export default function ClaimsAssistance({
             </section>
 
             <section id="step-1" className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-32">
-              <div className="w-full px-6 py-4 bg-white border-b border-slate-200 flex items-center justify-between">
+              <div className="w-full px-6 py-4 bg-white border-b border-slate-200">
                 <h3 className="text-base font-semibold text-slate-900">保单信息</h3>
-                <button
-                  type="button"
-                  onClick={() => openPolicyAttachment(selectedClaim.policyNo || '')}
-                  className="text-xs text-sky-500 hover:text-sky-600 underline underline-offset-2"
-                >
-                  保单文本链接
-                </button>
               </div>
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs text-slate-600 mb-1">保单号</label>
-                    <input type="text" value={selectedClaim.policyNo || ''} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
+                    {selectedClaim.policyNo ? (
+                      <button
+                        type="button"
+                        onClick={() => openPolicyAttachment(selectedClaim.policyNo || '')}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50 text-left text-sky-500 hover:text-sky-600 inline-flex items-center justify-between"
+                      >
+                        <span className="truncate">{selectedClaim.policyNo}</span>
+                        <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                      </button>
+                    ) : (
+                      <div className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50 text-slate-500">--</div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-slate-600 mb-1">保险公司</label>
@@ -558,13 +632,29 @@ export default function ClaimsAssistance({
                     />
                   </div>
                   <div className="md:col-span-2 xl:col-span-4">
-                    <label className="block text-xs text-slate-600 mb-1">批改信息</label>
-                    <textarea
-                      rows={2}
-                      value={selectedClaim.endorsement || ''}
-                      readOnly
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50"
-                    />
+                    <label className="block text-xs text-slate-600 mb-2">批单信息</label>
+                    {endorsementTimeline.length === 0 ? (
+                      <div className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50 text-slate-500">暂无批单记录</div>
+                    ) : (
+                      <ol className="relative border-l border-slate-200 pl-4 space-y-3">
+                        {endorsementTimeline.map((item, index) => (
+                          <li key={item.id} className="relative">
+                            <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                            <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                              <div className="text-xs text-slate-500">{item.time}</div>
+                              <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{item.content}</div>
+                              <button
+                                type="button"
+                                onClick={() => openEndorsementRecord(selectedClaim.policyNo || '', index)}
+                                className="mt-2 text-xs text-blue-500 hover:text-blue-600 underline underline-offset-2"
+                              >
+                                批单记录
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
                   </div>
                 </div>
               </div>
@@ -675,7 +765,15 @@ export default function ClaimsAssistance({
                   <input
                     type="datetime-local"
                     value={accidentInfo.reportTime}
-                    onChange={(e) => setAccidentInfo((prev) => ({ ...prev, reportTime: e.target.value }))}
+                    min={accidentInfo.time || undefined}
+                    onChange={(e) => {
+                      const nextReportTime = e.target.value;
+                      if (accidentInfo.time && nextReportTime && new Date(nextReportTime) < new Date(accidentInfo.time)) {
+                        alert('报案时间不能早于出险时间。');
+                        return;
+                      }
+                      setAccidentInfo((prev) => ({ ...prev, reportTime: nextReportTime }));
+                    }}
                     className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
                   />
                 </div>
@@ -729,18 +827,11 @@ export default function ClaimsAssistance({
                   />
                   <button
                     type="button"
-                    onClick={() => accidentEvidenceInputRef.current?.click()}
+                    onClick={() => openClaimAttachmentFolder('事故证明')}
                     className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
                   >
                     上传佐证
                   </button>
-                  <input
-                    ref={accidentEvidenceInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(event) => appendEvidenceFiles(event, setAccidentEvidenceFiles)}
-                  />
                 </div>
                 <div className="mt-1 text-xs text-slate-500">已上传 {accidentEvidenceFiles.length} 份佐证</div>
               </div>
@@ -805,18 +896,11 @@ export default function ClaimsAssistance({
                 </div>
                 <button
                   type="button"
-                  onClick={() => relationEvidenceInputRef.current?.click()}
+                  onClick={() => openClaimAttachmentFolder('委托证明')}
                   className="mt-5 px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
                 >
                   上传佐证
                 </button>
-                <input
-                  ref={relationEvidenceInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(event) => appendEvidenceFiles(event, setRelationEvidenceFiles)}
-                />
               </div>
               <div className="text-xs text-slate-500">已上传 {relationEvidenceFiles.length} 份承托关系材料</div>
             </div>
@@ -847,18 +931,11 @@ export default function ClaimsAssistance({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => vehicleEvidenceInputRef.current?.click()}
+                  onClick={() => openClaimAttachmentFolder('车辆证明')}
                   className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
                 >
                   上传佐证
                 </button>
-                <input
-                  ref={vehicleEvidenceInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(event) => appendEvidenceFiles(event, setVehicleEvidenceFiles)}
-                />
                 <span className="text-xs text-slate-500">已上传 {vehicleEvidenceFiles.length} 份（行驶证、驾驶证等）</span>
               </div>
             </div>
@@ -870,18 +947,11 @@ export default function ClaimsAssistance({
               <h3 className="text-lg font-semibold text-slate-900">货损情况</h3>
               <button
                 type="button"
-                onClick={() => directLossEvidenceInputRef.current?.click()}
+                onClick={() => openClaimAttachmentFolder('损失证明')}
                 className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
               >
                 上传佐证
               </button>
-              <input
-                ref={directLossEvidenceInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(event) => appendEvidenceFiles(event, setDirectLossEvidenceFiles)}
-              />
             </div>
 
             <div className="p-6 space-y-4">
@@ -991,16 +1061,21 @@ export default function ClaimsAssistance({
                 </table>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mt-3">
                 <button
                   type="button"
                   onClick={addCargo}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   新增货损
                 </button>
-                <div className="text-xs text-slate-500">已上传 {directLossEvidenceFiles.length} 份货损佐证</div>
+                <div className="flex items-center gap-6">
+                  <div className="text-sm font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-md px-4 py-1.5">
+                    合计损失金额：<span className="text-rose-600 text-base">¥{cargoList.reduce((sum, item) => sum + (Number(item.amount) || 0), 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="text-xs text-slate-500">已上传 {directLossEvidenceFiles.length} 份货损佐证</div>
+                </div>
               </div>
 
               <div className="border-t border-slate-200 pt-4">
@@ -1194,20 +1269,6 @@ export default function ClaimsAssistance({
       {/* Fixed Bottom Toolbar */}
         <div className="sticky bottom-0 -mx-6 -mb-6 lg:-mx-8 lg:-mb-6 mt-auto bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 flex flex-wrap justify-between items-center px-6 lg:px-8 gap-4">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const attachmentUrl = new URL(window.location.href);
-                attachmentUrl.searchParams.set('page', 'attachments');
-                attachmentUrl.searchParams.set('assistNo', selectedClaim.assistNo || '');
-                attachmentUrl.searchParams.set('mode', 'upload');
-                window.open(attachmentUrl.toString(), '_blank');
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
-            >
-              <Upload className="w-4 h-4" />
-              上传附件
-            </button>
             <button
               type="button"
               onClick={() => {

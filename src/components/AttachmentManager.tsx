@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, FileImage, FolderOpen, Trash2, Upload } from 'lucide-react';
 
-const ATTACHMENT_FOLDERS = ['个人身份证明', '车辆证明', '发票', '损失证明', '其他'] as const;
+const ATTACHMENT_FOLDERS = ['个人身份证明', '车辆证明', '发票', '损失证明', '其他', '委托证明', '事故证明'] as const;
 
 type AttachmentFolder = (typeof ATTACHMENT_FOLDERS)[number];
 
@@ -20,9 +20,11 @@ const buildStorageKey = (assistNo: string) => `claim_attachments_${assistNo}`;
 export default function AttachmentManager({
   assistNo,
   onClose,
+  initialFolder,
 }: {
   assistNo: string;
   onClose: () => void;
+  initialFolder?: string;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeFolder, setActiveFolder] = useState<AttachmentFolder>('个人身份证明');
@@ -33,24 +35,36 @@ export default function AttachmentManager({
     if (!assistNo) return;
 
     const raw = localStorage.getItem(buildStorageKey(assistNo));
+    
+    if (initialFolder && ATTACHMENT_FOLDERS.includes(initialFolder as AttachmentFolder)) {
+      setActiveFolder(initialFolder as AttachmentFolder);
+    }
+    
     if (!raw) return;
 
     try {
       const parsed = JSON.parse(raw) as AttachmentStore;
       setStore(parsed);
 
-      for (const folder of ATTACHMENT_FOLDERS) {
-        const firstFile = parsed[folder]?.[0];
+      if (initialFolder && ATTACHMENT_FOLDERS.includes(initialFolder as AttachmentFolder)) {
+        const firstFile = parsed[initialFolder as AttachmentFolder]?.[0];
         if (firstFile) {
-          setActiveFolder(folder);
           setSelectedFileId(firstFile.id);
-          break;
+        }
+      } else {
+        for (const folder of ATTACHMENT_FOLDERS) {
+          const firstFile = parsed[folder]?.[0];
+          if (firstFile) {
+            setActiveFolder(folder);
+            setSelectedFileId(firstFile.id);
+            break;
+          }
         }
       }
     } catch {
       setStore({});
     }
-  }, [assistNo]);
+  }, [assistNo, initialFolder]);
 
   const persistStore = (nextStore: AttachmentStore) => {
     setStore(nextStore);

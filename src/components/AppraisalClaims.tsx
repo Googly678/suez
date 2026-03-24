@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronDown, Search, Plus, Upload, FileText, AlertCircle, Check, ClipboardList, Building2, Trash2, Calculator, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { ChevronLeft, ChevronDown, Search, Plus, FileText, AlertCircle, Check, ClipboardList, Building2, Trash2, Calculator, CheckCircle2, ExternalLink } from 'lucide-react';
 
 export default function AppraisalClaims({
   claimsPool,
@@ -20,7 +20,7 @@ export default function AppraisalClaims({
   reviewStage?: 'appraisal' | 'insurer';
   canReview: boolean;
   onNavigateToClaimsAssistance?: (assistNo: string) => void;
-  onOpenAttachmentViewer?: (assistNo: string) => void;
+  onOpenAttachmentViewer?: (assistNo: string, folder?: string) => void;
 }) {
   const [selectedCase, setSelectedCase] = useState<any>(null);
   const [reviewComment, setReviewComment] = useState('');
@@ -55,6 +55,12 @@ export default function AppraisalClaims({
   const [claimRows] = useState([
     { id: 1, itemName: '电子设备', model: 'XH-001', quantity: '50', packageType: '纸箱', unitPrice: '1000', claimAmount: '50000', claimType: '报废', appraisalOpinion: '同意按报废核损' },
   ]);
+  const [appraisalCargoList, setAppraisalCargoList] = useState([
+    { id: 1, name: '', model: '', quantity: '', unit: '', price: '', amount: '', type: '' },
+  ]);
+  const [appraisalIndirectLossList, setAppraisalIndirectLossList] = useState([
+    { id: 1, amount: '', item: '', note: '' },
+  ]);
   const [insurerOpinion, setInsurerOpinion] = useState('');
   const [guideRows, setGuideRows] = useState([
     { id: 1, date: '', feedback: '', note: '' },
@@ -62,14 +68,12 @@ export default function AppraisalClaims({
   const [insurerAuditRows, setInsurerAuditRows] = useState([
     { id: 1, date: '', opinion: '', note: '' },
   ]);
-  const [detailAttachmentCount, setDetailAttachmentCount] = useState(0);
   const [reportPreview, setReportPreview] = useState('');
   const [claimLogText, setClaimLogText] = useState('');
   const [insurerActionMessage, setInsurerActionMessage] = useState('');
   const [appraisalReportPreview, setAppraisalReportPreview] = useState('');
   const [appraisalReportHtml, setAppraisalReportHtml] = useState('');
   const [appraisalActionMessage, setAppraisalActionMessage] = useState('');
-  const detailAttachmentInputRef = React.useRef<HTMLInputElement>(null);
   const stageConfig =
     reviewStage === 'insurer'
       ? {
@@ -104,12 +108,51 @@ export default function AppraisalClaims({
         };
   const isReviewEditable = selectedCase?.status === stageConfig.inProgressStatus && canReview;
 
+  const endorsementTimeline = useMemo(() => {
+    if (Array.isArray(selectedCase?.endorsementRecords) && selectedCase.endorsementRecords.length > 0) {
+      return selectedCase.endorsementRecords.map((item: any, index: number) => ({
+        id: String(item.id || `endorsement-${index + 1}`),
+        time: String(item.time || item.date || selectedCase?.updatedAt || '--'),
+        content: String(item.content || item.record || item.note || '--'),
+      }));
+    }
+
+    const text = String(selectedCase?.endorsement || '').trim();
+    if (!text) {
+      return [];
+    }
+
+    return text
+      .split(/\r?\n+/)
+      .map((line: string, index: number) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const matched = trimmed.match(/^(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)\s*[-:：\s]\s*(.+)$/);
+        if (matched) {
+          return { id: `endorsement-${index + 1}`, time: matched[1], content: matched[2] };
+        }
+        return { id: `endorsement-${index + 1}`, time: selectedCase?.updatedAt || '--', content: trimmed };
+      })
+      .filter(Boolean) as Array<{ id: string; time: string; content: string }>;
+  }, [selectedCase]);
+
+  useEffect(() => {
+    if (!selectedCase?.policyNo) return;
+    localStorage.setItem(`policy_endorsements_${selectedCase.policyNo}`, JSON.stringify(endorsementTimeline));
+  }, [selectedCase?.policyNo, endorsementTimeline]);
+
   const openPolicyAttachment = (policyNo: string) => {
     if (!policyNo) return;
     const url = new URL(window.location.href);
     url.searchParams.set('page', 'policy-attachments');
     url.searchParams.set('policyNo', policyNo);
     window.open(url.toString(), '_blank');
+  };
+
+  const openClaimAttachmentFolder = (folder: string) => {
+    const assistNo = selectedCase?.assistNo || '';
+    if (!assistNo) return;
+    onOpenAttachmentViewer?.(assistNo, folder);
   };
 
   const displayData = [...claimsPool]
@@ -204,6 +247,43 @@ export default function AppraisalClaims({
 
   const addGuideRow = () => {
     setGuideRows((prev) => [...prev, { id: Date.now(), date: '', feedback: '', note: '' }]);
+  };
+
+  const addAppraisalCargoRow = () => {
+    setAppraisalCargoList((prev) => [...prev, { id: Date.now(), name: '', model: '', quantity: '', unit: '', price: '', amount: '', type: '' }]);
+  };
+
+  const removeAppraisalCargoRow = (id: number) => {
+    if (appraisalCargoList.length <= 1) return;
+    setAppraisalCargoList((prev) => prev.filter((row) => row.id !== id));
+  };
+
+  const updateAppraisalCargoRow = (id: number, field: string, value: string) => {
+    setAppraisalCargoList((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        const next = { ...row, [field]: value } as any;
+        if (field === 'quantity' || field === 'price') {
+          const qty = Number(next.quantity) || 0;
+          const price = Number(next.price) || 0;
+          next.amount = qty > 0 && price >= 0 ? (qty * price).toFixed(2).replace(/\.00$/, '') : '';
+        }
+        return next;
+      }),
+    );
+  };
+
+  const addAppraisalIndirectLossRow = () => {
+    setAppraisalIndirectLossList((prev) => [...prev, { id: Date.now(), amount: '', item: '', note: '' }]);
+  };
+
+  const removeAppraisalIndirectLossRow = (id: number) => {
+    if (appraisalIndirectLossList.length <= 1) return;
+    setAppraisalIndirectLossList((prev) => prev.filter((row) => row.id !== id));
+  };
+
+  const updateAppraisalIndirectLossRow = (id: number, field: 'amount' | 'item' | 'note', value: string) => {
+    setAppraisalIndirectLossList((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
   const updateGuideRow = (id: number, field: 'date' | 'feedback' | 'note', value: string) => {
@@ -545,15 +625,6 @@ ${attachmentsSection}
     setAppraisalActionMessage('报告已下载。');
   };
 
-  const appendDetailAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const count = event.target.files?.length || 0;
-    if (count > 0) {
-      setDetailAttachmentCount((prev) => prev + count);
-      setInsurerActionMessage(`已上传附件 ${count} 份。`);
-    }
-    event.target.value = '';
-  };
-
   useEffect(() => {
     if (initialSelectedCase) {
       setSelectedCase(initialSelectedCase);
@@ -589,6 +660,45 @@ ${attachmentsSection}
         }]);
       }
       if (initialSelectedCase.guideRows?.length) setGuideRows(initialSelectedCase.guideRows);
+      const incomingAppraisalCargo = Array.isArray(initialSelectedCase.appraisalCargoList)
+        ? initialSelectedCase.appraisalCargoList
+        : [];
+      const incomingAssistCargo = Array.isArray(initialSelectedCase.cargoList)
+        ? initialSelectedCase.cargoList
+        : [];
+      const sourceCargoRows = incomingAppraisalCargo.length > 0 ? incomingAppraisalCargo : incomingAssistCargo;
+      setAppraisalCargoList(
+        sourceCargoRows.length > 0
+          ? sourceCargoRows.map((row: any, index: number) => ({
+              id: Number(row.id) || Date.now() + index,
+              name: String(row.name || row.itemName || ''),
+              model: String(row.model || ''),
+              quantity: String(row.quantity || ''),
+              unit: String(row.unit || row.packageType || ''),
+              price: String(row.price || row.unitPrice || ''),
+              amount: String(row.amount || row.claimAmount || ''),
+              type: String(row.type || row.claimType || ''),
+            }))
+          : [{ id: 1, name: '', model: '', quantity: '', unit: '', price: '', amount: '', type: '' }],
+      );
+
+      const incomingAppraisalIndirect = Array.isArray(initialSelectedCase.appraisalIndirectLossList)
+        ? initialSelectedCase.appraisalIndirectLossList
+        : [];
+      const incomingAssistIndirect = Array.isArray(initialSelectedCase.indirectLossList)
+        ? initialSelectedCase.indirectLossList
+        : [];
+      const sourceIndirectRows = incomingAppraisalIndirect.length > 0 ? incomingAppraisalIndirect : incomingAssistIndirect;
+      setAppraisalIndirectLossList(
+        sourceIndirectRows.length > 0
+          ? sourceIndirectRows.map((row: any, index: number) => ({
+              id: Number(row.id) || Date.now() + 1000 + index,
+              amount: String(row.amount || ''),
+              item: String(row.item || ''),
+              note: String(row.note || ''),
+            }))
+          : [{ id: 1, amount: '', item: '', note: '' }],
+      );
       onInitialSelectedCaseConsumed?.();
     }
   }, [initialSelectedCase, onInitialSelectedCaseConsumed]);
@@ -658,14 +768,18 @@ ${attachmentsSection}
                     <div><div className="text-xs text-slate-500 mb-1">关联协助号</div><div className="font-medium text-slate-900">{selectedCase.assistNo || '--'}</div></div>
                     <div>
                       <div className="text-xs text-slate-500 mb-1">保单号</div>
-                      <div className="font-medium text-slate-900">{selectedCase.policyNo || '--'}</div>
-                      <button
-                        type="button"
-                        onClick={() => openPolicyAttachment(selectedCase.policyNo || '')}
-                        className="mt-1 text-xs text-sky-500 hover:text-sky-600 underline underline-offset-2"
-                      >
-                        保单文本链接
-                      </button>
+                      {selectedCase.policyNo ? (
+                        <button
+                          type="button"
+                          onClick={() => openPolicyAttachment(selectedCase.policyNo || '')}
+                          className="font-medium text-sky-500 hover:text-sky-600 inline-flex items-center gap-1"
+                        >
+                          {selectedCase.policyNo}
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <div className="font-medium text-slate-900">--</div>
+                      )}
                     </div>
                     <div><div className="text-xs text-slate-500 mb-1">客户编码</div><div className="font-medium text-slate-900">{selectedCase.customerCode || '--'}</div></div>
                     <div><div className="text-xs text-slate-500 mb-1">被保险人</div><div className="font-medium text-slate-900">{selectedCase.insured || '--'}</div></div>
@@ -676,7 +790,57 @@ ${attachmentsSection}
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-slate-600 mb-3">事故信息</div>
+                  <div className="text-xs font-semibold text-slate-600 mb-3">保单及批改信息</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm mb-6">
+                    <div><div className="text-xs text-slate-500 mb-1">营业收入</div><div className="font-medium text-slate-900">{selectedCase.businessIncome || '¥50,000,000.00'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">赔偿限额</div><div className="font-medium text-slate-900">{selectedCase.compLimit || '¥5,000,000.00'}</div></div>
+                    <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">免赔条件</div><div className="font-medium text-slate-900">{selectedCase.deductibleClause || '每次事故绝对免赔额为人民币5000元或损失金额的10%，两者以高者为准。'}</div></div>
+                    <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">特约条款</div><div className="font-medium text-slate-900">{selectedCase.specialClause || '1. 扩展承保冷链运输风险；2. 扩展承保装卸过程中的意外损失。'}</div></div>
+                    <div className="md:col-span-2 xl:col-span-4">
+                      <div className="text-xs text-slate-500 mb-2">批单信息</div>
+                      {endorsementTimeline.length === 0 ? (
+                        <div className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md bg-slate-50/50 text-slate-500">暂无批单记录</div>
+                      ) : (
+                        <ol className="relative border-l border-slate-200 pl-4 space-y-3 ml-2">
+                          {endorsementTimeline.map((item: any, index: number) => (
+                            <li key={item.id} className="relative">
+                              <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                                <div className="text-xs text-slate-500">{item.time}</div>
+                                <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{item.content}</div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('page', 'policy-endorsements');
+                                    url.searchParams.set('policyNo', selectedCase.policyNo || '');
+                                    url.searchParams.set('index', String(index));
+                                    window.open(url.toString(), '_blank');
+                                  }}
+                                  className="mt-2 text-xs text-blue-500 hover:text-blue-600 underline underline-offset-2"
+                                >
+                                  批单记录
+                                </button>
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold text-slate-600">事故信息</div>
+                    <button
+                      type="button"
+                      onClick={() => openClaimAttachmentFolder('事故证明')}
+                      className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                    >
+                      上传佐证
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
                     <div><div className="text-xs text-slate-500 mb-1">出险时间</div><div className="font-medium text-slate-900">{selectedCase.accidentInfo?.time || '--'}</div></div>
                     <div><div className="text-xs text-slate-500 mb-1">报案时间</div><div className="font-medium text-slate-900">{selectedCase.accidentInfo?.reportTime || '--'}</div></div>
@@ -690,7 +854,16 @@ ${attachmentsSection}
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-slate-600 mb-3">承托关系</div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold text-slate-600">承托关系</div>
+                    <button
+                      type="button"
+                      onClick={() => openClaimAttachmentFolder('委托证明')}
+                      className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                    >
+                      上传佐证
+                    </button>
+                  </div>
                   {(selectedCase.logisticsCompanies || []).length === 0 ? (
                     <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无承托关系信息</div>
                   ) : (
@@ -703,7 +876,16 @@ ${attachmentsSection}
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-slate-600 mb-3">车辆信息</div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold text-slate-600">车辆信息</div>
+                    <button
+                      type="button"
+                      onClick={() => openClaimAttachmentFolder('车辆证明')}
+                      className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                    >
+                      上传佐证
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
                     <div><div className="text-xs text-slate-500 mb-1">货主</div><div className="font-medium text-slate-900">{selectedCase.ownerName || '--'}</div></div>
                     <div><div className="text-xs text-slate-500 mb-1">车牌号</div><div className="font-medium text-slate-900">{selectedCase.truckPlateNo || '--'}</div></div>
@@ -711,7 +893,16 @@ ${attachmentsSection}
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-slate-600 mb-3">直接损失（货损明细）</div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold text-slate-600">直接损失（货损明细）</div>
+                    <button
+                      type="button"
+                      onClick={() => openClaimAttachmentFolder('损失证明')}
+                      className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                    >
+                      上传佐证
+                    </button>
+                  </div>
                   {(selectedCase.cargoList || []).length === 0 ? (
                     <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无货损明细</div>
                   ) : (
@@ -744,6 +935,12 @@ ${attachmentsSection}
                           ))}
                         </tbody>
                       </table>
+                      <div className="bg-slate-50 border-t border-slate-200 px-4 py-3 text-right">
+                        <span className="text-sm font-medium text-slate-700">合计报损金额：</span>
+                        <span className="text-base font-bold text-rose-600">
+                          ¥{(selectedCase.cargoList || []).reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1111,21 +1308,6 @@ ${attachmentsSection}
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => detailAttachmentInputRef.current?.click()}
-              disabled={!isReviewEditable}
-              className="px-4 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            >
-              上传附件
-            </button>
-            <input
-              ref={detailAttachmentInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={appendDetailAttachment}
-            />
-            <button
-              type="button"
               onClick={() => onOpenAttachmentViewer?.(selectedCase?.assistNo || '')}
               className="px-4 py-2 border border-slate-300 bg-white rounded-md text-slate-700 hover:bg-slate-50"
             >
@@ -1262,14 +1444,18 @@ ${attachmentsSection}
                   </div>
                   <div>
                     <div className="text-xs text-slate-500 mb-1">保单号</div>
-                    <div className="font-medium text-slate-900">{selectedCase.policyNo || '--'}</div>
-                    <button
-                      type="button"
-                      onClick={() => openPolicyAttachment(selectedCase.policyNo || '')}
-                      className="mt-1 text-xs text-sky-500 hover:text-sky-600 underline underline-offset-2"
-                    >
-                      保单文本链接
-                    </button>
+                    {selectedCase.policyNo ? (
+                      <button
+                        type="button"
+                        onClick={() => openPolicyAttachment(selectedCase.policyNo || '')}
+                        className="font-medium text-sky-500 hover:text-sky-600 inline-flex items-center gap-1"
+                      >
+                        {selectedCase.policyNo}
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <div className="font-medium text-slate-900">--</div>
+                    )}
                   </div>
                   <div>
                     <div className="text-xs text-slate-500 mb-1">客户编码</div>
@@ -1295,7 +1481,57 @@ ${attachmentsSection}
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-slate-600 mb-3">事故信息</div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">保单及批改信息</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm mb-6">
+                  <div><div className="text-xs text-slate-500 mb-1">营业收入</div><div className="font-medium text-slate-900">{selectedCase.businessIncome || '¥50,000,000.00'}</div></div>
+                  <div><div className="text-xs text-slate-500 mb-1">赔偿限额</div><div className="font-medium text-slate-900">{selectedCase.compLimit || '¥5,000,000.00'}</div></div>
+                  <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">免赔条件</div><div className="font-medium text-slate-900">{selectedCase.deductibleClause || '每次事故绝对免赔额为人民币5000元或损失金额的10%，两者以高者为准。'}</div></div>
+                  <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">特约条款</div><div className="font-medium text-slate-900">{selectedCase.specialClause || '1. 扩展承保冷链运输风险；2. 扩展承保装卸过程中的意外损失。'}</div></div>
+                  <div className="md:col-span-2 xl:col-span-4">
+                    <div className="text-xs text-slate-500 mb-2">批单信息</div>
+                    {endorsementTimeline.length === 0 ? (
+                      <div className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md bg-slate-50/50 text-slate-500">暂无批单记录</div>
+                    ) : (
+                      <ol className="relative border-l border-slate-200 pl-4 space-y-3 ml-2">
+                        {endorsementTimeline.map((item: any, index: number) => (
+                          <li key={item.id} className="relative">
+                            <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                            <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                              <div className="text-xs text-slate-500">{item.time}</div>
+                              <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{item.content}</div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const url = new URL(window.location.href);
+                                  url.searchParams.set('page', 'policy-endorsements');
+                                  url.searchParams.set('policyNo', selectedCase.policyNo || '');
+                                  url.searchParams.set('index', String(index));
+                                  window.open(url.toString(), '_blank');
+                                }}
+                                className="mt-2 text-xs text-blue-500 hover:text-blue-600 underline underline-offset-2"
+                              >
+                                批单记录
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="text-xs font-semibold text-slate-600">事故信息</div>
+                  <button
+                    type="button"
+                    onClick={() => openClaimAttachmentFolder('事故证明')}
+                    className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                  >
+                    上传佐证
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
                   <div>
                     <div className="text-xs text-slate-500 mb-1">出险时间</div>
@@ -1333,7 +1569,16 @@ ${attachmentsSection}
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-slate-600 mb-3">承托关系</div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="text-xs font-semibold text-slate-600">承托关系</div>
+                  <button
+                    type="button"
+                    onClick={() => openClaimAttachmentFolder('委托证明')}
+                    className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                  >
+                    上传佐证
+                  </button>
+                </div>
                 {(selectedCase.logisticsCompanies || []).length === 0 ? (
                   <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无承托关系信息</div>
                 ) : (
@@ -1348,7 +1593,16 @@ ${attachmentsSection}
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-slate-600 mb-3">车辆信息</div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="text-xs font-semibold text-slate-600">车辆信息</div>
+                  <button
+                    type="button"
+                    onClick={() => openClaimAttachmentFolder('车辆证明')}
+                    className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                  >
+                    上传佐证
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
                   <div>
                     <div className="text-xs text-slate-500 mb-1">货主</div>
@@ -1362,7 +1616,16 @@ ${attachmentsSection}
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-slate-600 mb-3">直接损失（货损明细）</div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="text-xs font-semibold text-slate-600">直接损失（货损明细）</div>
+                  <button
+                    type="button"
+                    onClick={() => openClaimAttachmentFolder('损失证明')}
+                    className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                  >
+                    上传佐证
+                  </button>
+                </div>
                 {(selectedCase.cargoList || []).length === 0 ? (
                   <div className="text-sm text-slate-400 text-center py-4 border border-slate-200 rounded-lg">暂无货损明细</div>
                 ) : (
@@ -1700,7 +1963,225 @@ ${attachmentsSection}
 
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-semibold text-slate-900">保险公司认定意见</h3>
+              <h3 className="text-lg font-semibold text-slate-900">公估定损模块</h3>
+              <div className="text-xs text-slate-500 mt-1">公估损失核定清单</div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">货物损失核定</div>
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full min-w-[1120px] table-fixed text-left border-collapse whitespace-nowrap text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                        <th className="px-4 py-2 w-14">序号</th>
+                        <th className="px-4 py-2 w-[22%]">品名</th>
+                        <th className="px-4 py-2 w-[16%]">型号</th>
+                        <th className="px-4 py-2 w-24">数量</th>
+                        <th className="px-4 py-2 w-24">包装</th>
+                        <th className="px-4 py-2 w-24">单价</th>
+                        <th className="px-4 py-2 w-28">损失金额</th>
+                        <th className="px-4 py-2 w-28">损失类型</th>
+                        <th className="px-4 py-2 w-16 text-center">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {appraisalCargoList.map((row, index) => (
+                        <tr key={row.id}>
+                          <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={row.name}
+                              onChange={(e) => updateAppraisalCargoRow(row.id, 'name', e.target.value)}
+                              disabled={!isReviewEditable}
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                              placeholder="品名"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={row.model}
+                              onChange={(e) => updateAppraisalCargoRow(row.id, 'model', e.target.value)}
+                              disabled={!isReviewEditable}
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                              placeholder="型号"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              value={row.quantity}
+                              onChange={(e) => updateAppraisalCargoRow(row.id, 'quantity', e.target.value)}
+                              disabled={!isReviewEditable}
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                              placeholder="数量"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <select
+                              value={row.unit}
+                              onChange={(e) => updateAppraisalCargoRow(row.id, 'unit', e.target.value)}
+                              disabled={!isReviewEditable}
+                              className="w-full px-2 py-1 border border-slate-200 rounded bg-white"
+                            >
+                              <option value="">包装</option>
+                              <option value="木箱">木箱</option>
+                              <option value="纸箱">纸箱</option>
+                              <option value="编织袋">编织袋</option>
+                              <option value="裸装">裸装(含缠绕膜)</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              value={row.price}
+                              onChange={(e) => updateAppraisalCargoRow(row.id, 'price', e.target.value)}
+                              disabled={!isReviewEditable}
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                              placeholder="单价"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              value={row.amount}
+                              onChange={(e) => updateAppraisalCargoRow(row.id, 'amount', e.target.value)}
+                              disabled={!isReviewEditable}
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                              placeholder="损失金额"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <select
+                              value={row.type}
+                              onChange={(e) => updateAppraisalCargoRow(row.id, 'type', e.target.value)}
+                              disabled={!isReviewEditable}
+                              className="w-full px-2 py-1 border border-slate-200 rounded bg-white"
+                            >
+                              <option value="">损失类型</option>
+                              <option value="报废">报废</option>
+                              <option value="更换包装">更换包装</option>
+                              <option value="清洗或再加工">清洗或再加工</option>
+                              <option value="贬值折价">贬值折价</option>
+                              <option value="维修费">维修费</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => removeAppraisalCargoRow(row.id)}
+                              disabled={!isReviewEditable || appraisalCargoList.length === 1}
+                              className="p-1 rounded text-rose-500 hover:bg-rose-50 disabled:text-slate-300 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={addAppraisalCargoRow}
+                    disabled={!isReviewEditable}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增货损
+                  </button>
+                  <div className="text-sm font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-md px-4 py-1.5">
+                    合计损失金额：
+                    <span className="text-rose-600 text-base">¥{appraisalCargoList.reduce((sum, item) => sum + (Number(item.amount) || 0), 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-slate-600 mb-3">间接损失核定</div>
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                        <th className="px-4 py-2 w-14">序号</th>
+                        <th className="px-4 py-2 w-40">损失金额</th>
+                        <th className="px-4 py-2 w-40">损失项目</th>
+                        <th className="px-4 py-2">损失说明</th>
+                        <th className="px-4 py-2 w-16 text-center">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {appraisalIndirectLossList.map((row, index) => (
+                        <tr key={row.id}>
+                          <td className="px-4 py-2 text-slate-500">{index + 1}</td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              value={row.amount}
+                              onChange={(e) => updateAppraisalIndirectLossRow(row.id, 'amount', e.target.value)}
+                              disabled={!isReviewEditable}
+                              placeholder="损失金额"
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={row.item}
+                              onChange={(e) => updateAppraisalIndirectLossRow(row.id, 'item', e.target.value)}
+                              disabled={!isReviewEditable}
+                              placeholder="损失项目"
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={row.note}
+                              onChange={(e) => updateAppraisalIndirectLossRow(row.id, 'note', e.target.value)}
+                              disabled={!isReviewEditable}
+                              placeholder="损失说明"
+                              className="w-full px-2 py-1 border border-slate-200 rounded"
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => removeAppraisalIndirectLossRow(row.id)}
+                              disabled={!isReviewEditable || appraisalIndirectLossList.length === 1}
+                              className="p-1 rounded text-rose-500 hover:bg-rose-50 disabled:text-slate-300 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={addAppraisalIndirectLossRow}
+                    disabled={!isReviewEditable}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增间接损失
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-lg font-semibold text-slate-900">公估定责任意见</h3>
             </div>
             <div className="p-6">
               <textarea
@@ -1708,7 +2189,7 @@ ${attachmentsSection}
                 value={insurerOpinion}
                 onChange={(e) => setInsurerOpinion(e.target.value)}
                 disabled={!isReviewEditable}
-                placeholder="录入保险公司认定意见"
+                placeholder="录入公估定责任意见"
                 className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md"
               />
             </div>
@@ -1807,6 +2288,8 @@ ${attachmentsSection}
                       surveyContact: surveyBlocks[0]?.contact || '',
                       surveyLocation: surveyBlocks[0]?.location || '',
                       surveySummary: surveyBlocks[0]?.summary || '',
+                      appraisalCargoList,
+                      appraisalIndirectLossList,
                       guideRows,
                     }, reviewStage);
                     setShowReviewConfirm(false);

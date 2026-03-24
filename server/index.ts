@@ -88,7 +88,16 @@ CREATE TABLE IF NOT EXISTS policies (
   insurance_type TEXT NOT NULL,
   org_id TEXT,
   start_date TEXT,
-  end_date TEXT
+  end_date TEXT,
+  insured TEXT,
+  applicant TEXT,
+  business_income TEXT,
+  sum_insured TEXT,
+  premium TEXT,
+  compensation_limit TEXT,
+  deductible_clause TEXT,
+  special_clause TEXT,
+  linked_inquiry_no TEXT
 );
 
 CREATE TABLE IF NOT EXISTS claim_assists (
@@ -199,6 +208,60 @@ try {
 
 try {
   db.exec('ALTER TABLE policies ADD COLUMN org_id TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN insured TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN applicant TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN business_income TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN sum_insured TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN premium TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN compensation_limit TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN deductible_clause TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN special_clause TEXT');
+} catch {
+  // ignore
+}
+
+try {
+  db.exec('ALTER TABLE policies ADD COLUMN linked_inquiry_no TEXT');
 } catch {
   // ignore
 }
@@ -488,6 +551,7 @@ const getAssistByNo = db.prepare('SELECT * FROM claim_assists WHERE assist_no = 
 const getAssistByCaseNo = db.prepare('SELECT * FROM claim_assists WHERE related_case_no = ?');
 const getCaseByNo = db.prepare('SELECT * FROM appraisal_cases WHERE case_no = ?');
 const getPolicyByNo = db.prepare('SELECT * FROM policies WHERE policy_no = ?');
+const getInquiryByNo = db.prepare('SELECT * FROM inquiries WHERE inquiry_no = ?');
 const getOrgById = db.prepare('SELECT * FROM organizations WHERE org_id = ?');
 const getRoleById = db.prepare('SELECT * FROM roles WHERE role_id = ?');
 const getRoleByName = db.prepare('SELECT * FROM roles WHERE role_name = ?');
@@ -932,6 +996,107 @@ app.get('/api/policies', (req, res) => {
     .prepare(`SELECT * FROM policies WHERE org_id IN (${createInClausePlaceholder(scopedOrgIds)}) ORDER BY policy_no`)
     .all(...scopedOrgIds);
   res.json({ data: rows });
+});
+
+app.post('/api/policies', (req, res) => {
+  const currentUser = ensurePermission(req, res, ['policies.view', 'sales.inquiry.manage']);
+  if (!currentUser) return;
+
+  const body = req.body || {};
+  const policyNo = String(body.policyNo || '').trim();
+  const insurer = String(body.insurer || '').trim();
+  const insuranceType = String(body.insuranceType || '').trim();
+  const insured = String(body.insured || '').trim();
+  const applicant = String(body.applicant || '').trim();
+  const startDate = String(body.startDate || '').trim();
+  const endDate = String(body.endDate || '').trim();
+
+  if (!policyNo || !insurer || !insuranceType || !insured || !applicant || !startDate || !endDate) {
+    res.status(400).json({ error: '保单基础信息不完整' });
+    return;
+  }
+
+  if (endDate < startDate) {
+    res.status(400).json({ error: '保险期限结束时间不能早于起始时间' });
+    return;
+  }
+
+  const existing = getPolicyByNo.get(policyNo) as any;
+  if (existing) {
+    res.status(409).json({ error: '保单号已存在' });
+    return;
+  }
+
+  const payload = {
+    policy_no: policyNo,
+    customer_name: insured,
+    insurer,
+    insurance_type: insuranceType,
+    org_id: currentUser.orgId,
+    start_date: startDate,
+    end_date: endDate,
+    insured,
+    applicant,
+    business_income: String(body.businessIncome || '').trim(),
+    sum_insured: String(body.sumInsured || '').trim(),
+    premium: String(body.premium || '').trim(),
+    compensation_limit: String(body.compensationLimit || '').trim(),
+    deductible_clause: String(body.deductibleClause || '').trim(),
+    special_clause: String(body.specialClause || '').trim(),
+    linked_inquiry_no: String(body.linkedInquiryNo || '').trim() || null,
+  };
+
+  db.prepare(`
+    INSERT INTO policies (
+      policy_no, customer_name, insurer, insurance_type, org_id, start_date, end_date,
+      insured, applicant, business_income, sum_insured, premium, compensation_limit,
+      deductible_clause, special_clause, linked_inquiry_no
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    payload.policy_no,
+    payload.customer_name,
+    payload.insurer,
+    payload.insurance_type,
+    payload.org_id,
+    payload.start_date,
+    payload.end_date,
+    payload.insured,
+    payload.applicant,
+    payload.business_income,
+    payload.sum_insured,
+    payload.premium,
+    payload.compensation_limit,
+    payload.deductible_clause,
+    payload.special_clause,
+    payload.linked_inquiry_no,
+  );
+
+  res.json({ data: getPolicyByNo.get(policyNo) });
+});
+
+app.patch('/api/policies/:policyNo/link-inquiry', (req, res) => {
+  const currentUser = ensurePermission(req, res, ['policies.view', 'sales.inquiry.manage']);
+  if (!currentUser) return;
+
+  const { policyNo } = req.params;
+  const inquiryNo = String(req.body?.inquiryNo || '').trim();
+  const policy = getPolicyByNo.get(policyNo) as any;
+
+  if (!policy || !ensureDataScope(currentUser, policy.org_id)) {
+    res.status(404).json({ error: '保单不存在或无权访问' });
+    return;
+  }
+
+  if (inquiryNo) {
+    const inquiry = getInquiryByNo.get(inquiryNo) as any;
+    if (!inquiry || !ensureDataScope(currentUser, inquiry.org_id)) {
+      res.status(404).json({ error: '询价单不存在或无权访问' });
+      return;
+    }
+  }
+
+  db.prepare('UPDATE policies SET linked_inquiry_no = ? WHERE policy_no = ?').run(inquiryNo || null, policyNo);
+  res.json({ data: getPolicyByNo.get(policyNo) });
 });
 
 app.get('/api/policies/:policyNo/claims', (req, res) => {

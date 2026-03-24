@@ -22,6 +22,7 @@ import AppraisalClaims from './components/AppraisalClaims';
 import AttachmentManager from './components/AttachmentManager';
 import InquiryAttachmentManager from './components/InquiryAttachmentManager';
 import PolicyAttachmentManager from './components/PolicyAttachmentManager';
+import PolicyEndorsementViewer from './components/PolicyEndorsementViewer';
 import InquiryForm from './components/InquiryForm';
 import LoginScreen from './components/auth/LoginScreen';
 import OrganizationManagement from './components/system/OrganizationManagement';
@@ -367,6 +368,15 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/api';
 
 const parseMoney = (value: string) => Number(value.replace(/[¥,]/g, '')) || 0;
 const formatMoney = (value: number) => `¥${value.toLocaleString('zh-CN')}`;
+const formatCurrencyDisplayForPolicy = (value: string | number) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '--';
+  const num = Number(raw.replace(/[¥,\s]/g, ''));
+  if (!Number.isFinite(num)) {
+    return raw.startsWith('¥') ? raw : `¥${raw}`;
+  }
+  return formatMoney(num);
+};
 
 const matchRange = (amount: number, range: string) => {
   if (!range) return true;
@@ -398,6 +408,14 @@ type PolicyRow = {
   premium: string;
   claimAmount: string;
   reportCount: number;
+  insured?: string;
+  applicant?: string;
+  businessIncome?: string;
+  sumInsured?: string;
+  compensationLimit?: string;
+  deductibleClause?: string;
+  specialClause?: string;
+  linkedInquiryNo?: string;
 };
 
 const normalizeAssistRow = (row: any) => ({
@@ -505,15 +523,23 @@ const getAssistDetailFields = (assist: any) => ({
 
 const normalizePolicyRow = (row: any): PolicyRow => ({
   policyNo: row.policy_no,
-  customerName: row.customer_name || '',
+  customerName: row.customer_name || row.insured || '',
   startDate: row.start_date || '',
   endDate: row.end_date || '',
   insurer: row.insurer || '',
   insuranceType: row.insurance_type || '',
-  coverage: '--',
-  premium: '--',
+  coverage: row.sum_insured ? (String(row.sum_insured).startsWith('¥') ? row.sum_insured : formatCurrencyDisplayForPolicy(row.sum_insured)) : '--',
+  premium: row.premium ? (String(row.premium).startsWith('¥') ? row.premium : formatCurrencyDisplayForPolicy(row.premium)) : '--',
   claimAmount: '--',
   reportCount: 0,
+  insured: row.insured || row.customer_name || '',
+  applicant: row.applicant || '',
+  businessIncome: row.business_income ? (String(row.business_income).startsWith('¥') ? row.business_income : formatCurrencyDisplayForPolicy(row.business_income)) : '--',
+  sumInsured: row.sum_insured ? (String(row.sum_insured).startsWith('¥') ? row.sum_insured : formatCurrencyDisplayForPolicy(row.sum_insured)) : '--',
+  compensationLimit: row.compensation_limit ? (String(row.compensation_limit).startsWith('¥') ? row.compensation_limit : formatCurrencyDisplayForPolicy(row.compensation_limit)) : '--',
+  deductibleClause: row.deductible_clause || '',
+  specialClause: row.special_clause || '',
+  linkedInquiryNo: row.linked_inquiry_no || '',
 });
 
 export default function App() {
@@ -522,14 +548,17 @@ export default function App() {
   const isAttachmentPage = query.get('page') === 'attachments';
   const isInquiryAttachmentPage = query.get('page') === 'inquiry-attachments';
   const isPolicyAttachmentPage = query.get('page') === 'policy-attachments';
+  const isPolicyEndorsementPage = query.get('page') === 'policy-endorsements';
   const queryCustomerName = query.get('customerName') || '张三';
 
   const inquiryNo = query.get('inquiryNo') || '';
   const attachmentAssistNo = query.get('assistNo') || '';
+  const initialFolder = query.get('folder') || '';
   const policyNo = query.get('policyNo') || '';
+  const endorsementIndex = Number(query.get('index') || '0');
 
   if (isAttachmentPage) {
-    return <AttachmentManager assistNo={attachmentAssistNo} onClose={() => window.close()} />;
+    return <AttachmentManager assistNo={attachmentAssistNo} initialFolder={initialFolder} onClose={() => window.close()} />;
   }
 
   if (isInquiryAttachmentPage) {
@@ -538,6 +567,10 @@ export default function App() {
 
   if (isPolicyAttachmentPage) {
     return <PolicyAttachmentManager policyNo={policyNo} onClose={() => window.close()} />;
+  }
+
+  if (isPolicyEndorsementPage) {
+    return <PolicyEndorsementViewer policyNo={policyNo} recordIndex={endorsementIndex} onClose={() => window.close()} />;
   }
   
   if (isMobileInquiryPage) {
@@ -608,6 +641,10 @@ export default function App() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddOpportunityModalOpen, setIsAddOpportunityModalOpen] = useState(false);
+  const [isAddOfflinePolicyModalOpen, setIsAddOfflinePolicyModalOpen] = useState(false);
+  const [isLinkInquiryModalOpen, setIsLinkInquiryModalOpen] = useState(false);
+  const [linkInquirySearch, setLinkInquirySearch] = useState('');
+  const [pendingInquiryNo, setPendingInquiryNo] = useState('');
   const [showInquiryConfirm, setShowInquiryConfirm] = useState(false);
   const [submittedInquiries, setSubmittedInquiries] = useState<Record<string, any>>({});
   const [selectedPolicyNos, setSelectedPolicyNos] = useState<string[]>([]);
@@ -638,6 +675,21 @@ export default function App() {
     location: '',
     industry: '',
     scale: '',
+  });
+  const [newOfflinePolicy, setNewOfflinePolicy] = useState({
+    policyNo: '',
+    insurer: '',
+    insuranceType: '',
+    insured: '',
+    applicant: '',
+    startDate: '',
+    endDate: '',
+    businessIncome: '',
+    sumInsured: '',
+    premium: '',
+    compensationLimit: '',
+    deductibleClause: '',
+    specialClause: '',
   });
   const [opportunitySearchTerm, setOpportunitySearchTerm] = useState('');
   const [selectedCustomerForOpp, setSelectedCustomerForOpp] = useState<any>(null);
@@ -691,6 +743,32 @@ export default function App() {
   };
 
   const handleLogin = async ({ username, password }: { username: string; password: string }) => {
+    if (String(currentUser?.userId || '').startsWith('DEMO-')) {
+      const offlinePolicy: PolicyRow = {
+        policyNo: payload.policyNo,
+        customerName: payload.insured,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        insurer: payload.insurer,
+        insuranceType: payload.insuranceType,
+        coverage: formatCurrencyDisplay(payload.sumInsured),
+        premium: formatCurrencyDisplay(payload.premium),
+        claimAmount: '--',
+        reportCount: 0,
+        insured: payload.insured,
+        applicant: payload.applicant,
+        businessIncome: formatCurrencyDisplay(payload.businessIncome),
+        sumInsured: formatCurrencyDisplay(payload.sumInsured),
+        compensationLimit: formatCurrencyDisplay(payload.compensationLimit),
+        deductibleClause: payload.deductibleClause,
+        specialClause: payload.specialClause,
+      };
+      setPolicies((prev) => [offlinePolicy, ...prev]);
+      setIsAddOfflinePolicyModalOpen(false);
+      resetOfflinePolicyForm();
+      return;
+    }
+
     try {
       setAuthLoading(true);
       setAuthError('');
@@ -1140,11 +1218,14 @@ export default function App() {
     window.open(inquiryAttachmentUrl.toString(), '_blank');
   };
 
-  const handleOpenClaimAttachmentViewer = (assistNo: string) => {
+  const handleOpenClaimAttachmentViewer = (assistNo: string, folder?: string) => {
     if (!assistNo) return;
     const url = new URL(window.location.href);
     url.searchParams.set('page', 'attachments');
     url.searchParams.set('assistNo', assistNo);
+    if (folder) {
+      url.searchParams.set('folder', folder);
+    }
     window.open(url.toString(), '_blank');
   };
 
@@ -1565,6 +1646,136 @@ export default function App() {
     setPolicyFilter(emptyPolicyFilter);
   };
 
+  const formatCurrencyDisplay = (value: string) => formatCurrencyDisplayForPolicy(value);
+
+  const resetOfflinePolicyForm = () => {
+    setNewOfflinePolicy({
+      policyNo: '',
+      insurer: '',
+      insuranceType: '',
+      insured: '',
+      applicant: '',
+      startDate: '',
+      endDate: '',
+      businessIncome: '',
+      sumInsured: '',
+      premium: '',
+      compensationLimit: '',
+      deductibleClause: '',
+      specialClause: '',
+    });
+  };
+
+  const handleAddOfflinePolicy = async () => {
+    const payload = {
+      policyNo: newOfflinePolicy.policyNo.trim(),
+      insurer: newOfflinePolicy.insurer.trim(),
+      insuranceType: newOfflinePolicy.insuranceType.trim(),
+      insured: newOfflinePolicy.insured.trim(),
+      applicant: newOfflinePolicy.applicant.trim(),
+      startDate: newOfflinePolicy.startDate,
+      endDate: newOfflinePolicy.endDate,
+      businessIncome: newOfflinePolicy.businessIncome.trim(),
+      sumInsured: newOfflinePolicy.sumInsured.trim(),
+      premium: newOfflinePolicy.premium.trim(),
+      compensationLimit: newOfflinePolicy.compensationLimit.trim(),
+      deductibleClause: newOfflinePolicy.deductibleClause.trim(),
+      specialClause: newOfflinePolicy.specialClause.trim(),
+    };
+
+    if (!payload.policyNo || !payload.insurer || !payload.insuranceType || !payload.insured || !payload.applicant || !payload.startDate || !payload.endDate) {
+      alert('请先完整录入保单号、保险公司、险种、被保险人、投保人、保险期限。');
+      return;
+    }
+
+    if (payload.endDate < payload.startDate) {
+      alert('保险期限结束时间不能早于起始时间。');
+      return;
+    }
+
+    if (policies.some((item) => item.policyNo === payload.policyNo)) {
+      alert('保单号已存在，请更换后重试。');
+      return;
+    }
+
+    if (String(currentUser?.userId || '').startsWith('DEMO-')) {
+      setPolicies((prev) => prev.map((item) => (item.policyNo === selectedPolicyForDetail.policyNo ? { ...item, linkedInquiryNo: pendingInquiryNo } : item)));
+      setSelectedPolicyForDetail((prev) => (prev ? { ...prev, linkedInquiryNo: pendingInquiryNo } : prev));
+      setOrders((prev) => prev.map((item) => (item.id === pendingInquiryNo ? { ...item, policyNo: selectedPolicyForDetail.policyNo } : item)));
+      setIsLinkInquiryModalOpen(false);
+      setLinkInquirySearch('');
+      setPendingInquiryNo('');
+      return;
+    }
+
+    try {
+      const created = await apiRequest('/policies', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      const createdPolicy = normalizePolicyRow(created?.data || {});
+      setPolicies((prev) => [createdPolicy, ...prev]);
+      setIsAddOfflinePolicyModalOpen(false);
+      resetOfflinePolicyForm();
+    } catch (error) {
+      console.error('[handleAddOfflinePolicy] failed to persist policy:', error);
+      alert('新增线下保单失败，请稍后重试。');
+    }
+  };
+
+  const linkableInquiries = orders.filter((item) => {
+    const keyword = linkInquirySearch.trim();
+    if (!keyword) return true;
+    return item.id?.includes(keyword) || item.customer?.includes(keyword);
+  });
+
+  const handleLinkInquiryConfirm = async () => {
+    if (!selectedPolicyForDetail) return;
+    if (!pendingInquiryNo) {
+      alert('请选择要关联的询价单。');
+      return;
+    }
+
+    if (String(currentUser?.userId || '').startsWith('DEMO-')) {
+      setPolicies((prev) => prev.map((item) => (item.policyNo === selectedPolicyForDetail.policyNo ? { ...item, linkedInquiryNo: '' } : item)));
+      setSelectedPolicyForDetail((prev) => (prev ? { ...prev, linkedInquiryNo: '' } : prev));
+      return;
+    }
+
+    try {
+      const result = await apiRequest(`/policies/${selectedPolicyForDetail.policyNo}/link-inquiry`, {
+        method: 'PATCH',
+        body: JSON.stringify({ inquiryNo: pendingInquiryNo }),
+      });
+      const updatedPolicy = normalizePolicyRow(result?.data || {});
+      setPolicies((prev) => prev.map((item) => (item.policyNo === updatedPolicy.policyNo ? { ...item, ...updatedPolicy } : item)));
+      setSelectedPolicyForDetail((prev) => (prev && prev.policyNo === updatedPolicy.policyNo ? { ...prev, ...updatedPolicy } : prev));
+      setOrders((prev) => prev.map((item) => (item.id === pendingInquiryNo ? { ...item, policyNo: updatedPolicy.policyNo } : item)));
+      setIsLinkInquiryModalOpen(false);
+      setLinkInquirySearch('');
+      setPendingInquiryNo('');
+    } catch (error) {
+      console.error('[handleLinkInquiryConfirm] failed to link inquiry:', error);
+      alert('关联询价单失败，请稍后重试。');
+    }
+  };
+
+  const handleUnlinkInquiry = async () => {
+    if (!selectedPolicyForDetail?.linkedInquiryNo) return;
+    try {
+      const result = await apiRequest(`/policies/${selectedPolicyForDetail.policyNo}/link-inquiry`, {
+        method: 'PATCH',
+        body: JSON.stringify({ inquiryNo: '' }),
+      });
+      const updatedPolicy = normalizePolicyRow(result?.data || {});
+      setPolicies((prev) => prev.map((item) => (item.policyNo === updatedPolicy.policyNo ? { ...item, ...updatedPolicy } : item)));
+      setSelectedPolicyForDetail((prev) => (prev && prev.policyNo === updatedPolicy.policyNo ? { ...prev, ...updatedPolicy } : prev));
+    } catch (error) {
+      console.error('[handleUnlinkInquiry] failed to unlink inquiry:', error);
+      alert('解除关联失败，请稍后重试。');
+    }
+  };
+
   const refreshSystemData = async () => {
     await loadSystemBootstrap();
   };
@@ -1892,7 +2103,15 @@ export default function App() {
                       </select>
                     </div>
                   </div>
-                  <div className="mt-4 flex justify-end gap-2">
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddOfflinePolicyModalOpen(true)}
+                      className="px-4 py-2 border border-blue-300 text-blue-700 bg-blue-50 text-sm rounded-md hover:bg-blue-100 transition-colors"
+                    >
+                      新增线下保单
+                    </button>
+                    <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={handleApplyPolicyFilter}
@@ -1907,6 +2126,7 @@ export default function App() {
                     >
                       重置
                     </button>
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-slate-700">
@@ -2020,6 +2240,18 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => {
+                        setPendingInquiryNo(selectedPolicyForDetail?.linkedInquiryNo || '');
+                        setLinkInquirySearch('');
+                        setIsLinkInquiryModalOpen(true);
+                      }}
+                      disabled={!selectedPolicyForDetail}
+                      className="px-4 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed"
+                    >
+                      关联询价单
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         if (!selectedPolicyForDetail) return;
                         setSelectedOrderForClaim({
                           customerCode: '',
@@ -2105,6 +2337,62 @@ export default function App() {
                             </tr>
                           </tbody>
                         </table>
+                      </div>
+                    </section>
+
+                    <section>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-1.5 h-4 rounded-full bg-blue-500"></span>
+                          <h4 className="text-sm font-semibold text-slate-900">关联询价单</h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingInquiryNo(selectedPolicyForDetail?.linkedInquiryNo || '');
+                            setLinkInquirySearch('');
+                            setIsLinkInquiryModalOpen(true);
+                          }}
+                          className="px-3 py-1.5 text-xs text-blue-700 border border-blue-200 bg-blue-50 rounded-md hover:bg-blue-100"
+                        >
+                          {selectedPolicyForDetail.linkedInquiryNo ? '变更关联' : '新增关联'}
+                        </button>
+                      </div>
+                      <div className="border border-slate-200 rounded-lg p-4 text-sm">
+                        {selectedPolicyForDetail.linkedInquiryNo ? (
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="text-slate-700">
+                              已关联询价单：
+                              <span className="font-mono text-slate-900">{selectedPolicyForDetail.linkedInquiryNo}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const linkedOrder = orders.find((item) => item.id === selectedPolicyForDetail.linkedInquiryNo);
+                                  if (linkedOrder) {
+                                    setSelectedOrderForDetail(linkedOrder);
+                                    setActiveItem('询价单管理');
+                                  } else {
+                                    alert('未找到对应询价单，请先检查询价单列表。');
+                                  }
+                                }}
+                                className="px-3 py-1.5 text-xs border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50"
+                              >
+                                查看询价单
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleUnlinkInquiry}
+                                className="px-3 py-1.5 text-xs border border-rose-200 rounded-md text-rose-700 hover:bg-rose-50"
+                              >
+                                解除关联
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-slate-500">当前保单尚未关联询价单。</div>
+                        )}
                       </div>
                     </section>
 
@@ -2261,6 +2549,198 @@ export default function App() {
         onClose={() => setIsAddOpportunityModalOpen(false)}
         onSubmit={handleAddOpportunity}
       />
+
+      {isLinkInquiryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-3xl rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <h3 className="text-base font-semibold text-slate-900">关联询价单</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLinkInquiryModalOpen(false);
+                  setPendingInquiryNo('');
+                  setLinkInquirySearch('');
+                }}
+                className="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              >
+                关闭
+              </button>
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="mb-4">
+                <input
+                  type="text"
+                  value={linkInquirySearch}
+                  onChange={(e) => setLinkInquirySearch(e.target.value)}
+                  placeholder="按询价单号/客户名称搜索"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="max-h-[360px] overflow-y-auto rounded-lg border border-slate-200">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="px-4 py-2 w-12">选择</th>
+                      <th className="px-4 py-2">询价单号</th>
+                      <th className="px-4 py-2">客户名称</th>
+                      <th className="px-4 py-2">状态</th>
+                      <th className="px-4 py-2">关联保单号</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {linkableInquiries.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-2">
+                          <input
+                            type="radio"
+                            name="policy-link-inquiry"
+                            checked={pendingInquiryNo === item.id}
+                            onChange={() => setPendingInquiryNo(item.id)}
+                            className="h-4 w-4"
+                          />
+                        </td>
+                        <td className="px-4 py-2 font-mono text-slate-800">{item.id}</td>
+                        <td className="px-4 py-2 text-slate-700">{item.customer}</td>
+                        <td className="px-4 py-2 text-slate-600">{item.status || '--'}</td>
+                        <td className="px-4 py-2 text-slate-600">{item.policyNo || '--'}</td>
+                      </tr>
+                    ))}
+                    {linkableInquiries.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-slate-500">暂无可选询价单</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLinkInquiryModalOpen(false);
+                  setPendingInquiryNo('');
+                  setLinkInquirySearch('');
+                }}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleLinkInquiryConfirm}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+              >
+                确认关联
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAddOfflinePolicyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-5xl rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <h3 className="text-base font-semibold text-slate-900">新增线下保单</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddOfflinePolicyModalOpen(false);
+                  resetOfflinePolicyForm();
+                }}
+                className="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              >
+                关闭
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">保单号</label>
+                  <input type="text" value={newOfflinePolicy.policyNo} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, policyNo: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">保险公司</label>
+                  <input type="text" value={newOfflinePolicy.insurer} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, insurer: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">险种</label>
+                  <input type="text" value={newOfflinePolicy.insuranceType} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, insuranceType: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">被保险人</label>
+                  <input type="text" value={newOfflinePolicy.insured} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, insured: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">投保人</label>
+                  <input type="text" value={newOfflinePolicy.applicant} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, applicant: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">营业收入</label>
+                  <input type="text" value={newOfflinePolicy.businessIncome} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, businessIncome: e.target.value }))} placeholder="例如 50000000" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">保额</label>
+                  <input type="text" value={newOfflinePolicy.sumInsured} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, sumInsured: e.target.value }))} placeholder="例如 2000000" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">保费</label>
+                  <input type="text" value={newOfflinePolicy.premium} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, premium: e.target.value }))} placeholder="例如 18000" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">赔偿限额</label>
+                  <input type="text" value={newOfflinePolicy.compensationLimit} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, compensationLimit: e.target.value }))} placeholder="例如 5000000" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">保险期限起始</label>
+                  <input type="date" value={newOfflinePolicy.startDate} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, startDate: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">保险期限结束</label>
+                  <input type="date" value={newOfflinePolicy.endDate} min={newOfflinePolicy.startDate || undefined} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, endDate: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">免赔条件</label>
+                  <textarea rows={2} value={newOfflinePolicy.deductibleClause} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, deductibleClause: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-600">特约条款</label>
+                  <textarea rows={2} value={newOfflinePolicy.specialClause} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, specialClause: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddOfflinePolicyModalOpen(false);
+                  resetOfflinePolicyForm();
+                }}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleAddOfflinePolicy}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+              >
+                确认
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

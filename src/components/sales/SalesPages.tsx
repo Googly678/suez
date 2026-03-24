@@ -9,6 +9,7 @@ import {
   Save,
   Send,
   FileText,
+  ExternalLink,
 } from 'lucide-react';
 import {
   BarChart,
@@ -825,14 +826,18 @@ export function OrderManagementView({
               <div className="flex items-center gap-4 shrink-0">
                 <div className="text-right">
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">保单号</div>
-                  <div className="text-sm font-mono font-bold text-blue-600">{selectedOrderForDetail.policyNo || '--'}</div>
-                  <button
-                    type="button"
-                    onClick={() => openPolicyAttachment(selectedOrderForDetail.policyNo || '')}
-                    className="mt-1 text-xs text-sky-500 hover:text-sky-600 underline underline-offset-2"
-                  >
-                    保单文本链接
-                  </button>
+                  {selectedOrderForDetail.policyNo ? (
+                    <button
+                      type="button"
+                      onClick={() => openPolicyAttachment(selectedOrderForDetail.policyNo || '')}
+                      className="mt-0.5 text-sm font-mono font-bold text-sky-500 hover:text-sky-600 inline-flex items-center gap-1"
+                    >
+                      {selectedOrderForDetail.policyNo}
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <div className="text-sm font-mono font-bold text-blue-600">--</div>
+                  )}
                 </div>
               </div>
             </div>
