@@ -371,7 +371,7 @@ export default function AppraisalClaims({
         storageAttachments = {};
       }
     }
-    const attachmentFolders = ['个人身份证明', '车辆证明', '发票', '损失证明', '其他'] as const;
+    const attachmentFolders = ['被保险人信息', '车辆证明', '发票', '货损证明', '现场图片', '装货图片', '卸货图片', '施救费', '其他'] as const;
     const hasStorageImages = attachmentFolders.some((f) => (storageAttachments[f] || []).some((a) => a.type?.startsWith('image/')));
 
     const escHtml = (str: string) => String(str || '--').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -837,7 +837,7 @@ ${attachmentsSection}
                     <div className="text-xs font-semibold text-slate-600">事故信息</div>
                     <button
                       type="button"
-                      onClick={() => openClaimAttachmentFolder('事故证明')}
+                      onClick={() => openClaimAttachmentFolder('事故认定')}
                       className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
                     >
                       上传佐证
@@ -899,7 +899,7 @@ ${attachmentsSection}
                     <div className="text-xs font-semibold text-slate-600">直接损失（货损明细）</div>
                     <button
                       type="button"
-                      onClick={() => openClaimAttachmentFolder('损失证明')}
+                      onClick={() => openClaimAttachmentFolder('货损证明')}
                       className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
                     >
                       上传佐证
@@ -1529,7 +1529,7 @@ ${attachmentsSection}
                   <div className="text-xs font-semibold text-slate-600">事故信息</div>
                   <button
                     type="button"
-                    onClick={() => openClaimAttachmentFolder('事故证明')}
+                    onClick={() => openClaimAttachmentFolder('事故认定')}
                     className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
                   >
                     上传佐证
@@ -1623,7 +1623,7 @@ ${attachmentsSection}
                   <div className="text-xs font-semibold text-slate-600">直接损失（货损明细）</div>
                   <button
                     type="button"
-                    onClick={() => openClaimAttachmentFolder('损失证明')}
+                    onClick={() => openClaimAttachmentFolder('货损证明')}
                     className="px-3 py-1.5 text-xs border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
                   >
                     上传佐证

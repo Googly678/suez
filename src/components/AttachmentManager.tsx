@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, FileImage, FolderOpen, Trash2, Upload } from 'lucide-react';
+import {
+  CLAIM_ATTACHMENT_FOLDERS,
+  normalizeClaimAttachmentFolder,
+  type ClaimAttachmentFolder,
+} from '../constants/claimAttachmentFolders';
 
-const ATTACHMENT_FOLDERS = ['个人身份证明', '车辆证明', '发票', '损失证明', '其他', '委托证明', '事故证明'] as const;
+const ATTACHMENT_FOLDERS = CLAIM_ATTACHMENT_FOLDERS;
 
-type AttachmentFolder = (typeof ATTACHMENT_FOLDERS)[number];
+type AttachmentFolder = ClaimAttachmentFolder;
 
 type AttachmentItem = {
   id: string;
@@ -27,7 +32,7 @@ export default function AttachmentManager({
   initialFolder?: string;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeFolder, setActiveFolder] = useState<AttachmentFolder>('个人身份证明');
+  const [activeFolder, setActiveFolder] = useState<AttachmentFolder>('保单信息');
   const [store, setStore] = useState<AttachmentStore>({});
   const [selectedFileId, setSelectedFileId] = useState<string>('');
 
@@ -35,25 +40,37 @@ export default function AttachmentManager({
     if (!assistNo) return;
 
     const raw = localStorage.getItem(buildStorageKey(assistNo));
+    const normalizedInitialFolder = normalizeClaimAttachmentFolder(initialFolder);
     
-    if (initialFolder && ATTACHMENT_FOLDERS.includes(initialFolder as AttachmentFolder)) {
-      setActiveFolder(initialFolder as AttachmentFolder);
+    if (normalizedInitialFolder) {
+      setActiveFolder(normalizedInitialFolder);
     }
     
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw) as AttachmentStore;
-      setStore(parsed);
+      const parsed = JSON.parse(raw) as Record<string, AttachmentItem[]>;
+      const nextStore = Object.entries(parsed).reduce((acc, [folder, files]) => {
+        const normalized = normalizeClaimAttachmentFolder(folder);
+        if (!normalized) {
+          return acc;
+        }
+        const safeFiles = Array.isArray(files) ? files : [];
+        acc[normalized] = [...(acc[normalized] || []), ...safeFiles];
+        return acc;
+      }, {} as AttachmentStore);
 
-      if (initialFolder && ATTACHMENT_FOLDERS.includes(initialFolder as AttachmentFolder)) {
-        const firstFile = parsed[initialFolder as AttachmentFolder]?.[0];
+      setStore(nextStore);
+      localStorage.setItem(buildStorageKey(assistNo), JSON.stringify(nextStore));
+
+      if (normalizedInitialFolder) {
+        const firstFile = nextStore[normalizedInitialFolder]?.[0];
         if (firstFile) {
           setSelectedFileId(firstFile.id);
         }
       } else {
         for (const folder of ATTACHMENT_FOLDERS) {
-          const firstFile = parsed[folder]?.[0];
+          const firstFile = nextStore[folder]?.[0];
           if (firstFile) {
             setActiveFolder(folder);
             setSelectedFileId(firstFile.id);

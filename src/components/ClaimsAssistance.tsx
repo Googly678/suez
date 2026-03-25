@@ -843,7 +843,7 @@ export default function ClaimsAssistance({
                   />
                   <button
                     type="button"
-                    onClick={() => openClaimAttachmentFolder('事故证明')}
+                    onClick={() => openClaimAttachmentFolder('事故认定')}
                     className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
                   >
                     上传佐证
@@ -963,7 +963,7 @@ export default function ClaimsAssistance({
               <h3 className="text-lg font-semibold text-slate-900">货损情况</h3>
               <button
                 type="button"
-                onClick={() => openClaimAttachmentFolder('损失证明')}
+                  onClick={() => openClaimAttachmentFolder('货损证明')}
                 className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
               >
                 上传佐证
