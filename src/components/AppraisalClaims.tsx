@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { ChevronLeft, ChevronDown, Search, Plus, FileText, AlertCircle, Check, ClipboardList, Building2, Trash2, Calculator, CheckCircle2, ExternalLink } from 'lucide-react';
+import { getCompensationLimitDisplay } from '../constants/policyDisplay';
 
 export default function AppraisalClaims({
   claimsPool,
@@ -793,7 +794,8 @@ ${attachmentsSection}
                   <div className="text-xs font-semibold text-slate-600 mb-3">保单及批改信息</div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm mb-6">
                     <div><div className="text-xs text-slate-500 mb-1">营业收入</div><div className="font-medium text-slate-900">{selectedCase.businessIncome || '¥50,000,000.00'}</div></div>
-                    <div><div className="text-xs text-slate-500 mb-1">赔偿限额</div><div className="font-medium text-slate-900">{selectedCase.compLimit || '¥5,000,000.00'}</div></div>
+                    <div><div className="text-xs text-slate-500 mb-1">保费</div><div className="font-medium text-slate-900">{selectedCase.premium || '--'}</div></div>
+                    <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">赔偿限额</div><div className="font-medium text-slate-900 whitespace-pre-wrap">{getCompensationLimitDisplay(selectedCase.compLimit)}</div></div>
                     <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">免赔条件</div><div className="font-medium text-slate-900">{selectedCase.deductibleClause || '每次事故绝对免赔额为人民币5000元或损失金额的10%，两者以高者为准。'}</div></div>
                     <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">特约条款</div><div className="font-medium text-slate-900">{selectedCase.specialClause || '1. 扩展承保冷链运输风险；2. 扩展承保装卸过程中的意外损失。'}</div></div>
                     <div className="md:col-span-2 xl:col-span-4">
@@ -1484,7 +1486,8 @@ ${attachmentsSection}
                 <div className="text-xs font-semibold text-slate-600 mb-3">保单及批改信息</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm mb-6">
                   <div><div className="text-xs text-slate-500 mb-1">营业收入</div><div className="font-medium text-slate-900">{selectedCase.businessIncome || '¥50,000,000.00'}</div></div>
-                  <div><div className="text-xs text-slate-500 mb-1">赔偿限额</div><div className="font-medium text-slate-900">{selectedCase.compLimit || '¥5,000,000.00'}</div></div>
+                  <div><div className="text-xs text-slate-500 mb-1">保费</div><div className="font-medium text-slate-900">{selectedCase.premium || '--'}</div></div>
+                  <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">赔偿限额</div><div className="font-medium text-slate-900 whitespace-pre-wrap">{getCompensationLimitDisplay(selectedCase.compLimit)}</div></div>
                   <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">免赔条件</div><div className="font-medium text-slate-900">{selectedCase.deductibleClause || '每次事故绝对免赔额为人民币5000元或损失金额的10%，两者以高者为准。'}</div></div>
                   <div className="md:col-span-2 xl:col-span-4"><div className="text-xs text-slate-500 mb-1">特约条款</div><div className="font-medium text-slate-900">{selectedCase.specialClause || '1. 扩展承保冷链运输风险；2. 扩展承保装卸过程中的意外损失。'}</div></div>
                   <div className="md:col-span-2 xl:col-span-4">

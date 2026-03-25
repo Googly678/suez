@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronDown, Search, MoreHorizontal, Plus, AlertCircle, Check, ClipboardList, Building2, Trash2, ExternalLink } from 'lucide-react';
 
 import { locationData } from '../constants/locations';
+import { getCompensationLimitDisplay } from '../constants/policyDisplay';
 
 const ACCIDENT_CAUSE_MAP: Record<string, string[]> = {
   交通事故: [
@@ -93,11 +94,17 @@ export default function ClaimsAssistance({
         assistNo: selectedOrder.assistNo || fallbackAssistNo,
         customerCode: selectedOrder.customerCode,
         policyNo: selectedOrder.policyNo,
-        company: '平安财险', // Default or from order
-        type: '物流责任险',
-        insured: selectedOrder.customer,
-        startTime: '2026-01-01',
-        endTime: '2026-12-31',
+        company: selectedOrder.company || '平安财险',
+        type: selectedOrder.type || '物流责任险',
+        insured: selectedOrder.insured || selectedOrder.customer,
+        applicant: selectedOrder.applicant || '',
+        startTime: selectedOrder.startTime || '2026-01-01',
+        endTime: selectedOrder.endTime || '2026-12-31',
+        premium: selectedOrder.premium || '',
+        businessIncome: selectedOrder.businessIncome || '',
+        compLimit: selectedOrder.compLimit || '',
+        deductibleClause: selectedOrder.deductibleClause || '',
+        specialClause: selectedOrder.specialClause || '',
       });
     }
   }, [selectedOrder]);
@@ -610,8 +617,17 @@ export default function ClaimsAssistance({
                     <input type="text" value={selectedClaim.businessIncome || '¥50,000,000.00'} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
                   </div>
                   <div>
+                    <label className="block text-xs text-slate-600 mb-1">保费</label>
+                    <input type="text" value={selectedClaim.premium || '--'} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
+                  </div>
+                  <div className="md:col-span-2 xl:col-span-4">
                     <label className="block text-xs text-slate-600 mb-1">赔偿限额</label>
-                    <input type="text" value={selectedClaim.compLimit || '¥5,000,000.00'} readOnly className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50" />
+                    <textarea
+                      rows={4}
+                      value={getCompensationLimitDisplay(selectedClaim.compLimit)}
+                      readOnly
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md bg-slate-50"
+                    />
                   </div>
                   <div className="md:col-span-2 xl:col-span-4">
                     <label className="block text-xs text-slate-600 mb-1">免赔条件</label>

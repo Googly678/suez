@@ -28,6 +28,7 @@ import LoginScreen from './components/auth/LoginScreen';
 import OrganizationManagement from './components/system/OrganizationManagement';
 import AccessControlManagement from './components/system/AccessControlManagement';
 import { locationData } from './constants/locations';
+import { getCompensationLimitDisplay } from './constants/policyDisplay';
 import {
   CustomerManagementView,
   OpportunityManagementView,
@@ -373,7 +374,7 @@ const formatCurrencyDisplayForPolicy = (value: string | number) => {
   if (!raw) return '--';
   const num = Number(raw.replace(/[¥,\s]/g, ''));
   if (!Number.isFinite(num)) {
-    return raw.startsWith('¥') ? raw : `¥${raw}`;
+    return raw;
   }
   return formatMoney(num);
 };
@@ -453,8 +454,14 @@ const normalizeAssistRow = (row: any) => ({
   company: row.company || '',
   type: row.insurance_type || '',
   insured: row.insured || '',
+  applicant: row.applicant || '',
   startTime: row.start_time || '',
   endTime: row.end_time || '',
+  premium: row.premium || '',
+  businessIncome: row.business_income || '',
+  compLimit: row.compensation_limit || '',
+  deductibleClause: row.deductible_clause || '',
+  specialClause: row.special_clause || '',
   status: row.status || '',
   latestReviewComment: row.latest_review_comment || '',
   reportTime: row.report_time || '',
@@ -479,6 +486,12 @@ const normalizeCaseRow = (row: any) => {
     insured: row.insured || payloadSource.insured || '',
     company: row.company || payloadSource.company || '',
     type: row.insurance_type || payloadSource.type || payloadSource.insuranceType || '',
+    applicant: payloadSource.applicant || '',
+    premium: payloadSource.premium || '',
+    businessIncome: payloadSource.businessIncome || '',
+    compLimit: payloadSource.compLimit || payloadSource.compensationLimit || '',
+    deductibleClause: payloadSource.deductibleClause || '',
+    specialClause: payloadSource.specialClause || '',
     status: row.status || '',
     reportTime: row.report_time || '',
     reviewDecision: row.review_decision || '',
@@ -508,6 +521,12 @@ const getAssistDetailFields = (assist: any) => ({
   cargoList: assist?.cargoList || [],
   accidentInfo: assist?.accidentInfo || {},
   logisticsCompanies: assist?.logisticsCompanies || [],
+  applicant: assist?.applicant || '',
+  premium: assist?.premium || '',
+  businessIncome: assist?.businessIncome || '',
+  compLimit: assist?.compLimit || assist?.compensationLimit || '',
+  deductibleClause: assist?.deductibleClause || '',
+  specialClause: assist?.specialClause || '',
   ownerName: assist?.ownerName || '',
   truckPlateNo: assist?.truckPlateNo || '',
   indirectLossList: assist?.indirectLossList || [],
@@ -536,7 +555,7 @@ const normalizePolicyRow = (row: any): PolicyRow => ({
   applicant: row.applicant || '',
   businessIncome: row.business_income ? (String(row.business_income).startsWith('¥') ? row.business_income : formatCurrencyDisplayForPolicy(row.business_income)) : '--',
   sumInsured: row.sum_insured ? (String(row.sum_insured).startsWith('¥') ? row.sum_insured : formatCurrencyDisplayForPolicy(row.sum_insured)) : '--',
-  compensationLimit: row.compensation_limit ? (String(row.compensation_limit).startsWith('¥') ? row.compensation_limit : formatCurrencyDisplayForPolicy(row.compensation_limit)) : '--',
+  compensationLimit: getCompensationLimitDisplay(row.compensation_limit),
   deductibleClause: row.deductible_clause || '',
   specialClause: row.special_clause || '',
   linkedInquiryNo: row.linked_inquiry_no || '',
@@ -2257,6 +2276,17 @@ export default function App() {
                           customerCode: '',
                           policyNo: selectedPolicyForDetail.policyNo,
                           customer: selectedPolicyForDetail.customerName,
+                          company: selectedPolicyForDetail.insurer,
+                          type: selectedPolicyForDetail.insuranceType,
+                          insured: selectedPolicyForDetail.insured || selectedPolicyForDetail.customerName,
+                          applicant: selectedPolicyForDetail.applicant || '',
+                          startTime: selectedPolicyForDetail.startDate,
+                          endTime: selectedPolicyForDetail.endDate,
+                          premium: selectedPolicyForDetail.premium,
+                          businessIncome: selectedPolicyForDetail.businessIncome || '',
+                          compLimit: selectedPolicyForDetail.compensationLimit || '',
+                          deductibleClause: selectedPolicyForDetail.deductibleClause || '',
+                          specialClause: selectedPolicyForDetail.specialClause || '',
                           assistNo: generateClaimAssistNo(),
                         });
                         setActiveItem('理赔协助');
@@ -2695,7 +2725,7 @@ export default function App() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-slate-600">赔偿限额</label>
-                  <input type="text" value={newOfflinePolicy.compensationLimit} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, compensationLimit: e.target.value }))} placeholder="例如 5000000" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                  <textarea rows={4} value={newOfflinePolicy.compensationLimit} onChange={(e) => setNewOfflinePolicy((prev) => ({ ...prev, compensationLimit: e.target.value }))} placeholder="每次事故赔偿限额：5000000&#10;保单累计赔偿限额：10000000&#10;附加盗抢险每次限额：200000&#10;附加盗抢险累计限额：500000" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-slate-600">保险期限起始</label>
