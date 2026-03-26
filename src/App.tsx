@@ -2503,6 +2503,7 @@ export default function App() {
                   onSubmit={handleClaimsSubmit}
                   canManage={hasPermission('claims.assist.manage')}
                   canSubmit={hasPermission('claims.assist.submit')}
+                  onOpenAttachmentViewer={handleOpenClaimAttachmentViewer}
                 />
               </div>
             ) : activeItem === '公估理赔' ? (

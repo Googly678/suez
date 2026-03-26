@@ -61,6 +61,7 @@ export default function ClaimsAssistance({
   onSubmit,
   canManage,
   canSubmit,
+  onOpenAttachmentViewer,
 }: {
   selectedOrder?: any;
   claimAssistPool?: any[];
@@ -69,6 +70,7 @@ export default function ClaimsAssistance({
   onSubmit: (claim: any) => void;
   canManage: boolean;
   canSubmit: boolean;
+  onOpenAttachmentViewer?: (assistNo: string, folder?: string) => void;
 }) {
   const emptyListFilter = {
     policyNo: '',
@@ -309,7 +311,7 @@ export default function ClaimsAssistance({
     event: React.ChangeEvent<HTMLInputElement>,
     setFiles: React.Dispatch<React.SetStateAction<string[]>>,
   ) => {
-    const names = Array.from(event.target.files || []).map((file) => file.name);
+    const names = Array.from(event.target.files || []).map((file: File) => file.name);
     if (names.length > 0) {
       setFiles((prev) => [...prev, ...names]);
     }
@@ -335,11 +337,15 @@ export default function ClaimsAssistance({
   const openClaimAttachmentFolder = (folder: string) => {
     const assistNo = selectedClaim?.assistNo || '';
     if (!assistNo) return;
-    const attachmentUrl = new URL(window.location.href);
-    attachmentUrl.searchParams.set('page', 'attachments');
-    attachmentUrl.searchParams.set('assistNo', assistNo);
-    attachmentUrl.searchParams.set('folder', folder);
-    window.open(attachmentUrl.toString(), '_blank');
+    if (onOpenAttachmentViewer) {
+      onOpenAttachmentViewer(assistNo, folder);
+    } else {
+      const attachmentUrl = new URL(window.location.href);
+      attachmentUrl.searchParams.set('page', 'attachments');
+      attachmentUrl.searchParams.set('assistNo', assistNo);
+      attachmentUrl.searchParams.set('folder', folder);
+      window.open(attachmentUrl.toString(), '_blank');
+    }
   };
 
   const endorsementTimeline = useMemo(() => {
@@ -1288,11 +1294,15 @@ export default function ClaimsAssistance({
             <button
               type="button"
               onClick={() => {
-                const attachmentUrl = new URL(window.location.href);
-                attachmentUrl.searchParams.set('page', 'attachments');
-                attachmentUrl.searchParams.set('assistNo', selectedClaim.assistNo || '');
-                attachmentUrl.searchParams.set('mode', 'view');
-                window.open(attachmentUrl.toString(), '_blank');
+                const assistNo = selectedClaim?.assistNo || '';
+                if (onOpenAttachmentViewer) {
+                  onOpenAttachmentViewer(assistNo);
+                } else {
+                  const attachmentUrl = new URL(window.location.href);
+                  attachmentUrl.searchParams.set('page', 'attachments');
+                  attachmentUrl.searchParams.set('assistNo', assistNo);
+                  window.open(attachmentUrl.toString(), '_blank');
+                }
               }}
               className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white shadow-sm rounded-md text-slate-700 font-medium hover:bg-slate-50 transition-colors"
             >
