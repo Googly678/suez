@@ -762,32 +762,6 @@ export default function App() {
   };
 
   const handleLogin = async ({ username, password }: { username: string; password: string }) => {
-    if (String(currentUser?.userId || '').startsWith('DEMO-')) {
-      const offlinePolicy: PolicyRow = {
-        policyNo: payload.policyNo,
-        customerName: payload.insured,
-        startDate: payload.startDate,
-        endDate: payload.endDate,
-        insurer: payload.insurer,
-        insuranceType: payload.insuranceType,
-        coverage: formatCurrencyDisplay(payload.sumInsured),
-        premium: formatCurrencyDisplay(payload.premium),
-        claimAmount: '--',
-        reportCount: 0,
-        insured: payload.insured,
-        applicant: payload.applicant,
-        businessIncome: formatCurrencyDisplay(payload.businessIncome),
-        sumInsured: formatCurrencyDisplay(payload.sumInsured),
-        compensationLimit: formatCurrencyDisplay(payload.compensationLimit),
-        deductibleClause: payload.deductibleClause,
-        specialClause: payload.specialClause,
-      };
-      setPolicies((prev) => [offlinePolicy, ...prev]);
-      setIsAddOfflinePolicyModalOpen(false);
-      resetOfflinePolicyForm();
-      return;
-    }
-
     try {
       setAuthLoading(true);
       setAuthError('');
@@ -1043,8 +1017,9 @@ export default function App() {
 
   const handleAddCustomer = () => {
     const id = `CUST-2026-${String(customers.length + 1).padStart(3, '0')}`;
+    const customerCode = generateCustomerCode();
     const location = `${newCustomer.province}/${newCustomer.city}/${newCustomer.district}`;
-    setCustomers([...customers, { ...newCustomer, id, location }]);
+    setCustomers([...customers, { ...newCustomer, id, customerCode, location }]);
     setIsAddModalOpen(false);
     setNewCustomer({
       name: '',
@@ -1800,7 +1775,7 @@ export default function App() {
   };
 
   if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center text-slate-500">系统加载中...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-slate-500 app-shell">系统加载中...</div>;
   }
 
   if (!currentUser) {
@@ -1808,8 +1783,8 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
-      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} flex-shrink-0 bg-slate-900 text-white transition-all duration-300 flex flex-col z-20 shadow-xl shadow-slate-900/20`}>
+    <div className="app-shell flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} app-sidebar flex-shrink-0 bg-slate-900 text-white transition-all duration-300 flex flex-col z-20 shadow-xl shadow-slate-900/20`}>
         <div className="h-16 flex items-center justify-center border-b border-slate-800 px-4 shrink-0">
           {isSidebarOpen ? (
             <div className="flex w-full items-center justify-center">
@@ -1906,8 +1881,8 @@ export default function App() {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-10">
+      <div className="app-content-wrap flex-1 flex flex-col min-w-0 bg-white">
+        <header className="app-topbar h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-500 hover:text-slate-700 focus:outline-none p-1 rounded-md hover:bg-slate-100 transition-colors">
               <Menu className="w-5 h-5" />
@@ -1940,7 +1915,7 @@ export default function App() {
               <input
                 type="text"
                 placeholder="搜索订单、客户、案件..."
-                className="pl-9 pr-4 py-2 w-64 text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
+                className="claude-input pl-9 pr-4 py-2 w-64 text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
               />
             </div>
             <button className="relative text-slate-500 hover:text-slate-700 transition-colors p-1.5 rounded-full hover:bg-slate-100">

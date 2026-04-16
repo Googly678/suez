@@ -658,6 +658,7 @@ ${attachmentsSection}
           summary: initialSelectedCase.surveySummary || '',
           imageCount: 0,
           notebookCount: 0,
+          images: [],
         }]);
       }
       if (initialSelectedCase.guideRows?.length) setGuideRows(initialSelectedCase.guideRows);

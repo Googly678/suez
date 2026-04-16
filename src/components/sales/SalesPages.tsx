@@ -84,11 +84,11 @@ export function CustomerManagementView({
   const customerEndDisplay = filteredCustomerCount;
 
   return selectedCustomer ? (
-    <div className="flex flex-col h-full bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
-      <div className="mb-8 flex items-center gap-4 border-b border-slate-100 pb-6">
+    <div className="claude-card flex flex-col h-full bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
+      <div className="mb-8 flex items-center gap-4 border-b border-[var(--border-warm)] pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f6e2da] text-[#8f3f28] border border-[#e5c2b6]">
               {selectedCustomer.industry}
             </span>
           </div>
